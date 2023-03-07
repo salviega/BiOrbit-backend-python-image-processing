@@ -216,47 +216,7 @@ def generate_ndvi(tiflist, landsat_dir, folder_name, shapes):
 
     # Convert NDVI to forest/not-forest classification and save it to a file
     forest_file = os.path.join(ndvi_folder, 'forest_not_forest.TIF')
-    forest_not_forest(ndvi_file, forest_file)
-
-    # Clip forest/not-forest classification to the PNNSFL shape
-    clipped_file = os.path.join(ndvi_folder, 'forest_mask.TIF')
-    with rasterio.open(forest_file) as src:
-        out_image, out_transform = rasterio.mask.mask(src, shapes, crop=True)
-        out_meta = src.meta
-        out_meta.update({"driver": "GTiff",
-                          "height": out_image.shape[1],
-                          "width": out_image.shape[2],
-                          "transform": out_transform})
-        with rasterio.open(clipped_file, "w", **out_meta) as dest:
-            dest.write(out_image)
-
-    # Replace 0 values with NaNs in the clipped file
-    with rasterio.open(clipped_file) as src:
-        band_forest = src.read(1)
-        arr = np.where(band_forest == 0, np.nan, band_forest)
-        out_meta = src.meta
-        with rasterio.open(clipped_file, "w", **out_meta) as dest:
-            dest.write(arr, 1)
-
-    print("---")
-    print("---")
-    print("The forest not forest was clipped on PNNSFL shape")
-    print("---")
-    print("---")
-
-    with rasterio.open(clipped_file) as src:
-        band_forest = src.read(1)
-        pixel_size = src.res[0] * src.res[1]  # assuming square pixels
-        # Create a boolean mask of the NaN pixels
-        nan_mask = np.isnan(band_forest)
-        # Invert the mask to get a mask of the non-NaN pixels
-        non_nan_mask = ~nan_mask
-        # Count the number of non-NaN pixels
-        num_non_nan_pixels = np.count_nonzero(non_nan_mask)
-        # Calculate the total area of the non-NaN pixels in hectares
-        total_area = num_non_nan_pixels * pixel_size / 10000
-        print(f"Total area of non-NaN pixels: {total_area} hectares")
-
+    forest_not_forest(ndvi_file, shapes, forest_file)
 
 # Site's coord (EPSG:4326)
 protected_area = config('PROTECTED_AREA')
@@ -268,12 +228,12 @@ geojson_path = config('GEOJSON_PATH')
 landsat_dir = config('LANDSAT_DIR')
 
 # Open shapes file
-pnnsfl_panel_path = config('LANDSAT_DIR')
-pnnsfl_shape_path = config('LANDSAT_DIR')
+pnnsfl_panel_path = config('PROTECTED_AREA_PANEL_PATH')
+pnnsfl_shape_path = config('PROTECTED_AREA_SHAPE_PATH')
 
 # folders name
-bands_folder = config('PROTECTED_AREA_PANEL_PATH')
-ndvi_folder = config('PROTECTED_AREA_SHAPE_PATH')
+bands_folder = config('BANDS_FOLDER')
+ndvi_folder = config('NDVI_FOLDER')
 
 
 # Open shapes file
