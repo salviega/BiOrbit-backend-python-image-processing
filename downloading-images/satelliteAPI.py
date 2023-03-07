@@ -121,7 +121,6 @@ class LandsatAPI:
         page = 1
         while page <= pages:
 
-            print('\n')
             print('========')
             print(f'Page: {page}')
             print(f'Pages: {pages}')
@@ -202,6 +201,9 @@ class LandsatAPI:
 
             extract_and_move_file(self.download_folder, self.landsat_dir, 'band', 'NDVI')
 
+            '''
+                TODO: The conde continue, here.
+            '''
 
 def extract_and_move_file(downloads_dir, landsat_dir, bands_folder_name, ndvi_folder_name):
     """
@@ -317,7 +319,7 @@ def prepare_and_run_chromium(chromedriver_path, downloads_dir):
         TODO: Fix the headless
     '''
 
-    # options.headless('--headless')
+    #options.headless('--headless')
 
     ''' 
         <- bug  
