@@ -52,7 +52,62 @@ def ndvi(band4_path, band5_path, shapes, output_path):
     print('NDVI mask clipped to provided shapes')
 
 
-def forest_not_forest(ndvi_file, shapes, output_path):
+def forest_ndvi(band4_path, band5_path, shapes, threshold, output_path):
+    with rasterio.open(band4_path) as band4:
+        with rasterio.open(band5_path) as band5:
+            red = band4.read(1)
+            nir = band5.read(1)
+
+            # Calculate NDVI
+            ndvi_data = (nir - red) / (nir + red)
+
+            # Set values less than threshold to np.nan and same 0
+            ndvi_data[ndvi_data < threshold] = np.nan
+            ndvi_data[ndvi_data == 0] = np.nan
+
+            with rasterio.open(
+                output_path,
+                'w',
+                driver='Gtiff',
+                width=ndvi_data.shape[1],
+                height=ndvi_data.shape[0],
+                count=1,
+                dtype='float64',
+                transform=band4.transform,
+                crs='EPSG:32618'
+            ) as dst:
+                dst.write(ndvi_data, 1)
+
+    print('NDVI file created successfully')
+
+    # Clip forest NDVI to the provided shapes
+    clipped_file = os.path.join(os.path.dirname(output_path), 'forest_NDVI_mask_clipped.tif')
+    with rasterio.open(output_path) as src:
+        out_image, out_transform = mask(src, shapes, crop=True)
+        out_meta = src.meta.copy()
+        out_meta.update({
+            "driver": "GTiff",
+            "height": out_image.shape[1],
+            "width": out_image.shape[2],
+            "transform": out_transform
+        })
+        with rasterio.open(clipped_file, "w", **out_meta) as dest:
+            dest.write(out_image)
+
+    print('Forest NDVI mask clipped to provided shapes')
+
+    with rasterio.open(clipped_file) as src:
+        band_forest = src.read(1)
+        pixel_size = src.res[0] * src.res[1]  # assuming square pixels
+        # Create a mask of the pixels greater than 0
+        new_mask = band_forest > 0
+        # Count the number of pixels greater than 0
+        num_pixels = np.count_nonzero(new_mask)
+        # Calculate the total area of the pixels greater than 0 in hectares
+        total_area = num_pixels * pixel_size / 10000
+        print(f"Total area of forest/non-forest: {total_area} hectares")
+
+def forest_not_forest(ndvi_file, shapes, threshold, output_path):
     """Classify forest and non-forest areas based on NDVI values and clip the output to the provided shapefile.
 
     Args:
@@ -67,9 +122,6 @@ def forest_not_forest(ndvi_file, shapes, output_path):
     with rasterio.open(ndvi_file) as src:
         ndvi = src.read(1)
         ndvi[ndvi == 0] = np.nan
-
-    # Set a threshold value for forest/non-forest classification
-    threshold = 0.7
 
     # Create a boolean mask of the forest pixels
     forest_mask = ndvi >= threshold

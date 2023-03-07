@@ -13,7 +13,7 @@ import rasterio.mask
 import pyproj
 from pyproj import Proj
 from shapely.ops import transform
-from shapely.geometry import mapping
+from shapely.geometry import mapping, shape
 from send2trash import send2trash
 
 # External library imports
@@ -21,7 +21,7 @@ from osgeo import gdal
 
 # Project-specific library imports
 import AtmosphericCorrection as ac
-from NDVI import ndvi, forest_not_forest
+from NDVI import ndvi, forest_not_forest, forest_ndvi
 
 def get_folder(landsat_dir, bands_folder):
     landsat_date_folder = sorted(os.listdir(landsat_dir))[-1]
@@ -205,7 +205,10 @@ def generate_ndvi(tiflist, landsat_dir, folder_name, shapes):
 
     # Calculate NDVI and save it to a file
     ndvi_file = os.path.join(ndvi_folder, 'NDVI.TIF')
-    ndvi(red_band, nir_band, shapes, ndvi_file)
+    #ndvi(red_band, nir_band, shapes, ndvi_file)
+
+    # Convert forest NDVI and save it to a file
+    forest_ndvi(red_band, nir_band, shapes, 0.7, ndvi_file)
 
     print("---")
     print("---")
@@ -214,8 +217,8 @@ def generate_ndvi(tiflist, landsat_dir, folder_name, shapes):
     print("---")
 
     # Convert NDVI to forest/not-forest classification and save it to a file
-    forest_file = os.path.join(ndvi_folder, 'forest_not_forest.TIF')
-    forest_not_forest(ndvi_file, shapes, forest_file)
+    #forest_file = os.path.join(ndvi_folder, 'forest_not_forest.TIF')
+    #forest_not_forest(ndvi_file, shapes, 0.7, forest_file)
 
 # Site's coord (EPSG:4326)
 protected_area = config('PROTECTED_AREA')
@@ -240,8 +243,12 @@ with fiona.open(pnnsfl_panel_path, "r") as panel, fiona.open(pnnsfl_shape_path, 
     panel_shape = [feature["geometry"] for feature in panel]
     ppnsfl_shape = [feature['geometry'] for feature in ppnsfl]
 
+ppnsfl_shape_area_m2 = shape(ppnsfl_shape[0]).area
+ppnsfl_shape_area_ha = ppnsfl_shape_area_m2 / 10000
+print(f"The area of the shape is {ppnsfl_shape_area_ha} hectares.")
+
 # clip to panel
-tiflist = get_filelist(landsat_dir, bands_folder, '*.TIF')
+'''tiflist = get_filelist(landsat_dir, bands_folder, '*.TIF')
 clip_raster_on_mask(panel_shape, tiflist)
 
 # affine shapes
@@ -251,7 +258,7 @@ affine_tif(tiflist)
 # convert DN to Radiance
 tiflist = get_filelist(landsat_dir, bands_folder, '*.TIF')
 metadatalist = get_filelist(landsat_dir, bands_folder, '*MTL.txt')
-generate_atmospheric_correction(tiflist, metadatalist)
+generate_atmospheric_correction(tiflist, metadatalist)'''
 
 # NDVI
 tiflist = get_filelist(landsat_dir, bands_folder, '*.tif')
