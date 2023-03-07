@@ -233,10 +233,7 @@ def extract_and_move_file(downloads_dir, landsat_dir, bands_folder_name, ndvi_fo
             if not os.path.exists(new_folder):
 
                 os.makedirs(new_folder, exist_ok=True)
-                shutil.move(extracted_folder, os.path.join(new_folder, bands_folder_name))
-
-                # Create NDVI directory
-                os.mkdir(os.path.join(new_folder, ndvi_folder_name))
+                shutil.move(extracted_folder, os.path.join(new_folder))
 
             else:
                 send2trash(os.path.join(downloads_dir, file_name_without_ext))

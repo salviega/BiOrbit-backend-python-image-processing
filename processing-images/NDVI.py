@@ -1,36 +1,55 @@
+# Standard library imports
 import os
 
+# Third-party library imports
+import numpy as np
 import rasterio
 from rasterio.mask import mask
-import numpy as np
+
+# External library imports
+
+# Project-specific library imports
 
 
-def ndvi(band4, band5, output_path):
-    """" to solve the issue of red surface reflectances close to zero : just add a constant to the red band surface
-    reflectance. This constant must be greater than the standard deviation of atmospheric correction noise. As this
-    one is usually close to 0.01, the constant could be 0.05.
-    """
+def ndvi(band4_path, band5_path, shapes, output_path):
+    with rasterio.open(band4_path) as band4:
+        with rasterio.open(band5_path) as band5:
+            red = band4.read(1)
+            nir = band5.read(1)
 
-    dataset1 = rasterio.open(band4)
-    dataset2 = rasterio.open(band5)
+            # Calculate NDVI
+            ndvi_data = (nir - red) / (nir + red)
 
-    red = dataset1.read(1)
-    nir = dataset2.read(1)
+            with rasterio.open(
+                output_path,
+                'w',
+                driver='Gtiff',
+                width=ndvi_data.shape[1],
+                height=ndvi_data.shape[0],
+                count=1,
+                dtype='float64',
+                transform=band4.transform,
+                crs='EPSG:32618'
+            ) as dst:
+                dst.write(ndvi_data, 1)
 
-    # Calculate NDVI
-    ndvi = (nir - red) / (nir + red)
+    print('NDVI file created successfully')
 
-    arr = rasterio.open(output_path,
-                        'w',
-                        driver='Gtiff',
-                        width=ndvi.shape[1], height=ndvi.shape[0],
-                        count=1,
-                        dtype='float64',
-                        transform=dataset1.transform,
-                        crs='EPSG:32618')
-    arr.write(ndvi, 1)
-    arr.close()
-    print('succesful')
+    # Clip NDVI to the provided shapes
+    clipped_file = os.path.join(os.path.dirname(output_path), 'NDVI_mask_clipped.tif')
+    with rasterio.open(output_path) as src:
+        out_image, out_transform = mask(src, shapes, crop=True)
+        out_meta = src.meta.copy()
+        out_meta.update({
+            "driver": "GTiff",
+            "height": out_image.shape[1],
+            "width": out_image.shape[2],
+            "transform": out_transform
+        })
+        with rasterio.open(clipped_file, "w", **out_meta) as dest:
+            dest.write(out_image)
+
+    print('NDVI mask clipped to provided shapes')
 
 
 def forest_not_forest(ndvi_file, shapes, output_path):

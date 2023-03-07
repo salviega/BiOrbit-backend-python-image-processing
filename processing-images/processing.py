@@ -196,7 +196,6 @@ def generate_atmospheric_correction(tiflist, metadata):
 
 
 def generate_ndvi(tiflist, landsat_dir, folder_name, shapes):
-    print(tiflist)
     # Extract red and near-infrared bands
     red_band = tiflist[2]
     nir_band = tiflist[3]
@@ -206,7 +205,7 @@ def generate_ndvi(tiflist, landsat_dir, folder_name, shapes):
 
     # Calculate NDVI and save it to a file
     ndvi_file = os.path.join(ndvi_folder, 'NDVI.TIF')
-    ndvi(red_band, nir_band, ndvi_file)
+    ndvi(red_band, nir_band, shapes, ndvi_file)
 
     print("---")
     print("---")
