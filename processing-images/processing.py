@@ -220,6 +220,23 @@ def generate_ndvi(tiflist, landsat_dir, folder_name, shapes):
     #forest_file = os.path.join(ndvi_folder, 'forest_not_forest.TIF')
     #forest_not_forest(ndvi_file, shapes, 0.7, forest_file)
 
+
+def create_shapefile(file, output_file):
+    # Load the GeoJSON file using GeoPandas
+    gdf = gpd.read_file(file)
+
+    # Reproject the GeoDataFrame to EPSG:32618
+    gdf = gdf.to_crs(CRS('EPSG:32618'))
+
+    # Calculate the area in hectares
+    area = gdf.geometry.area.sum() / 10000
+    print(f"Total area of shape: {area} hectares")
+
+    # Save the GeoDataFrame to a shapefile
+    output_file = file[:-8] + '.shp'
+    gdf.to_file(output_file)
+
+
 # Site's coord (EPSG:4326)
 protected_area = config('PROTECTED_AREA')
 latitude = config('LATITUDE')

@@ -21,15 +21,15 @@ from send2trash import send2trash
 
 
 class LandsatAPI:
-    def __init__(self, username, password, chromedriver_path, downloads_dir, landsat_dir):
+    def __init__(self, username, password, chromedriver_path, downloads_dir, protected_area_dir):
 
         self.username = username
         self.password = password
         self.driver = prepare_and_run_chromium(chromedriver_path, downloads_dir)
         self.download_folder = downloads_dir
-        self.landsat_dir = landsat_dir
+        self.landsat_dir = protected_area_dir
 
-    def query(self, coordinates, date):
+    def query(self, coordinates, date_range):
         class SatelliteImage:
             def __int__(self, code, data_acquired, path, row):
                 self.code = code
@@ -57,19 +57,21 @@ class LandsatAPI:
         time.sleep(1)
 
         # Add coords
-        latitude, longitude = coordinates
-        coord_entry_add_button = self.driver.find_element(By.ID, "coordEntryAdd")
-        coord_entry_add_button.click()
-        latitude_input = self.driver.find_element(By.XPATH, "/html/body/div[7]/div[2]/div[2]/input")
-        latitude_input.send_keys(latitude)
-        longitude_input = self.driver.find_element(By.XPATH, "/html/body/div[7]/div[2]/div[5]/input")
-        longitude_input.send_keys(longitude)
-        submit_button = self.driver.find_element(By.XPATH, "/html/body/div[7]/div[3]/div/button[1]")
-        submit_button.click()
+        for coord in coordinates:
+            latitude = str(coord[1])
+            longitude = str(coord[0])
+            coord_entry_add_button = self.driver.find_element(By.ID, "coordEntryAdd")
+            coord_entry_add_button.click()
+            latitude_input = self.driver.find_element(By.XPATH, "/html/body/div[7]/div[2]/div[2]/input")
+            latitude_input.send_keys(latitude)
+            longitude_input = self.driver.find_element(By.XPATH, "/html/body/div[7]/div[2]/div[5]/input")
+            longitude_input.send_keys(longitude)
+            submit_button = self.driver.find_element(By.XPATH, "/html/body/div[7]/div[3]/div/button[1]")
+            submit_button.click()
         time.sleep(0.5)
 
         # Add data range
-        start, end = date
+        start, end = get_date_range(date_range)
         start_date_input = self.driver.find_element(By.ID, "start_linked")
         start_date_input.send_keys(start)
         end_date_input = self.driver.find_element(By.ID, "end_linked")
@@ -342,3 +344,29 @@ def prepare_and_run_chromium(chromedriver_path, downloads_dir):
 
     # Return the driver object
     return driver
+
+
+def get_date_range(date_range_days):
+    """
+    Returns a tuple of the start and end dates for a given date range.
+
+    Args:
+        date_range_days (int): The number of days in the date range.
+
+    Returns:
+        tuple: A tuple of the start and end dates as strings in the format 'mm/dd/yyyy'.
+    """
+    # Get the current date
+    today = datetime.date.today()
+
+    # Format the current date as a string
+    end = today.strftime('%m/%d/%Y')
+
+    # Calculate the start date that is `date_range_days` days ago from the current date
+    start = today - datetime.timedelta(days=date_range_days)
+
+    # Format the start date as a string
+    start_str = start.strftime('%m/%d/%Y')
+
+    # Return the start and end dates as a tuple
+    return start_str, end
