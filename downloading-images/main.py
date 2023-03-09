@@ -1,25 +1,14 @@
 # Standard library imports
-import glob
 import json
 import os
 
 # Third-party library imports
 from decouple import config
 import geopandas as gpd
-import fiona
 import folium
-import numpy as np
-import rasterio
-import rasterio.mask
-import pyproj
-from pyproj import Proj
 from pyproj import CRS
-from shapely.ops import transform
-from shapely.geometry import mapping, shape
-from send2trash import send2trash
 
 # External library imports
-from osgeo import gdal
 
 # Project-specific library imports
 from satelliteAPI import LandsatAPI
@@ -30,6 +19,7 @@ def replace_spaces_with_underscore(string):
     Replaces spaces in a string with underscores and makes all letters lowercase.
     """
     return string.replace(' ', '_').lower()
+
 
 def create_folder(name, output_path):
     try:
@@ -63,7 +53,7 @@ def create_shapefile(file, protected_area_name, output_path):
     new_output_path = os.path.join(output_path, protected_area_name + '.shp')
     gdf.to_file(new_output_path)
 
-    return new_output_path
+    return new_output_path, area
 
 
 def get_footprint(path_to_geojson):
@@ -92,10 +82,33 @@ def get_footprint(path_to_geojson):
     return coords
 
 
+def save_geojson_to_folder(geojson_str, folder_path, filename):
+    """
+    Saves a GeoJSON string to a file in the specified folder with the specified filename.
+
+    Args:
+    geojson_str (str): A string representing the GeoJSON data.
+    folder_path (str): The path to the folder where the file will be saved.
+    filename (str): The name of the file to be saved.
+
+    Returns:
+    None
+    """
+    if not os.path.exists(folder_path):
+        name = os.path.join(folder_path, filename + '_map.geojson')
+        os.makedirs(name)
+
+    file_path = os.path.join(folder_path, filename)
+
+    with open(file_path, 'w') as f:
+        f.write(geojson_str)
+
+    print(f'Saved GeoJSON to {file_path}')
+
+    return file_path
+
 # site's coord (EPSG:4326)
 protected_area_name = replace_spaces_with_underscore(config('PROTECTED_AREA'))
-latitude = config('LATITUDE')
-longitude = config('LONGITUDE')
 geojson_path = config('GEOJSON_PATH')  # https://geojson.io/
 
 # USGS website
@@ -111,16 +124,22 @@ downloads_dir = config('DOWNLOADS_DIR')
 # landsat directory
 landsat_dir = config('LANDSAT_DIR')
 
+# Open shapes file
+pnnsfl_panel_path = config('PROTECTED_AREA_PANEL_PATH')
+pnnsfl_shape_path = config('PROTECTED_AREA_SHAPE_PATH')
+
 # folders name
 bands_folder = config('BANDS_FOLDER')
 ndvi_folder = config('NDVI_FOLDER')
 
 
 protected_area_dir = create_folder(protected_area_name, landsat_dir)
-protected_area_shape_dir = create_shapefile(geojson_path, protected_area_name, protected_area_dir)
+protected_area_shape_dir, protected_area_total_extension = create_shapefile(geojson_path, protected_area_name, protected_area_dir)
+# geojson_path = save_geojson_to_folder(geojson_path, protected_area_dir, protected_area_name)
 footprint = get_footprint(geojson_path)
 
 api = LandsatAPI(username, password, chromedriver_path, downloads_dir, protected_area_dir)
-api.query(footprint, 60)
+# api.query(footprint, 45)
+api.processing(protected_area_name, protected_area_total_extension, protected_area_dir, protected_area_shape_dir, bands_folder, ndvi_folder)
 
 

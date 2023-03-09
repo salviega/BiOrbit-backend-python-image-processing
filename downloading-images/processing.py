@@ -23,23 +23,35 @@ from osgeo import gdal
 import AtmosphericCorrection as ac
 from NDVI import ndvi, forest_not_forest, forest_ndvi
 
-def get_folder(landsat_dir, bands_folder):
-    landsat_date_folder = sorted(os.listdir(landsat_dir))[-1]
-    files = os.path.join(landsat_dir, landsat_date_folder)
-    landsat_folder = [folder for folder in os.listdir(files) if folder.endswith(bands_folder)]
-    bands_tiff_folder = os.path.join(files, landsat_folder[0])
-    return bands_tiff_folder
+def get_folder(protected_area_dir, bands_folder):
+    # Get a list of all the directories in the protected_area_dir
+    dir_list = [os.path.join(protected_area_dir, d) for d in os.listdir(protected_area_dir) if os.path.isdir(os.path.join(protected_area_dir, d))]
+
+    # Sort the list of directories in ascending order
+    sorted_dir_list = sorted(dir_list)
+
+    # Get the last directory in the sorted list
+    last_dir = sorted_dir_list[-1]
+
+    last_folder_ndvi = os.path.join(last_dir, bands_folder)
+    return  last_folder_ndvi
 
 
-def get_filelist(landsat_dir, bands_folder, format_name):
-    # Find the files
-    landsat_date_folder = sorted(os.listdir(landsat_dir))[-1]
-    files = os.path.join(landsat_dir, landsat_date_folder)
-    landsat_bands_folder = [folder for folder in os.listdir(files) if folder.endswith(bands_folder)]
-    bands_tiff_folder = os.path.join(files, landsat_bands_folder[0])
-    tiflist = sorted(glob.glob(os.path.join(bands_tiff_folder, format_name)))
+def get_filelist(protected_area_dir, bands_folder, format_name):
+    # Get a list of all the directories in the protected_area_dir
+    dir_list = [os.path.join(protected_area_dir, d) for d in os.listdir(protected_area_dir) if os.path.isdir(os.path.join(protected_area_dir, d))]
 
-    return tiflist
+    # Sort the list of directories in ascending order
+    sorted_dir_list = sorted(dir_list)
+
+    # Get the last directory in the sorted list
+    last_dir = sorted_dir_list[-1]
+
+    last_folder_bands = os.path.join(last_dir, bands_folder)
+
+    file_list = sorted(glob.glob(os.path.join(last_folder_bands, format_name)))
+
+    return file_list
 
 
 def change_crs(latitude, longitude,pnnsfl_panel_path, geojson_path):
@@ -168,6 +180,7 @@ def affine_tif(tiflist):
     print("---")
     print("---")
 
+
 def generate_atmospheric_correction(tiflist, metadata):
     """
     Generates atmospheric correction for each TIFF file in the input list, and saves the reflectance data as a new TIFF
@@ -210,16 +223,13 @@ def generate_ndvi(tiflist, landsat_dir, folder_name, shapes):
     # Convert forest NDVI and save it to a file
     forest_ndvi(red_band, nir_band, shapes, 0.7, ndvi_file)
 
+    # Convert NDVI to forest/not-forest classification and save it to a file
+    #forest_not_forest(ndvi_file, shapes, 0.7, ndvi_file)
+
     print("---")
     print("---")
     print("NDVI is ready")
     print("---")
     print("---")
-
-    # Convert NDVI to forest/not-forest classification and save it to a file
-    #forest_file = os.path.join(ndvi_folder, 'forest_not_forest.TIF')
-    #forest_not_forest(ndvi_file, shapes, 0.7, forest_file)
-
-
 
 

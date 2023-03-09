@@ -18,16 +18,16 @@ from selenium.webdriver.chrome.service import Service
 from send2trash import send2trash
 
 # Project-specific library imports
-
+from processing import *
 
 class LandsatAPI:
     def __init__(self, username, password, chromedriver_path, downloads_dir, protected_area_dir):
 
         self.username = username
         self.password = password
-        self.driver = prepare_and_run_chromium(chromedriver_path, downloads_dir)
+        self.driver = 10 # prepare_and_run_chromium(chromedriver_path, downloads_dir)
         self.download_folder = downloads_dir
-        self.landsat_dir = protected_area_dir
+        self.protected_area_dir = protected_area_dir
 
     def query(self, coordinates, date_range):
         class SatelliteImage:
@@ -201,11 +201,35 @@ class LandsatAPI:
                         time.sleep(1.5)
                         self.driver.quit()
 
-            extract_and_move_file(self.download_folder, self.landsat_dir, 'band', 'NDVI')
+            extract_and_move_file(self.download_folder, self.protected_area_dir, 'band', 'NDVI')
 
             '''
                 TODO: The conde continue, here.
             '''
+
+    def processing(self, protected_area_name, protected_area_total_extension, protected_area_dir, protected_area_shape_dir, bands_folder, ndvi_folder):
+
+        # Open shapes file
+        with fiona.open(protected_area_shape_dir, "r") as panel, fiona.open(protected_area_shape_dir, "r") as protected_area_src:
+            protected_area_shape = [feature['geometry'] for feature in protected_area_src]
+
+        '''# clip to panel
+        tif_list = get_filelist(protected_area_dir, bands_folder, '*.TIF')
+        clip_raster_on_mask(protected_area_shape, tif_list)
+
+        # affine shapes
+        tif_list = get_filelist(protected_area_dir, bands_folder, '*.TIF')
+        affine_tif(tif_list)
+
+        # convert DN to Radiance
+        tif_list = get_filelist(protected_area_dir, bands_folder, '*.TIF')
+        metadata_list = get_filelist(protected_area_dir, bands_folder, '*MTL.txt')
+        generate_atmospheric_correction(tif_list, metadata_list)'''
+
+        # NDVI
+        tif_list = get_filelist(protected_area_dir, bands_folder, '*.tif')
+        protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_dir, ndvi_folder, protected_area_shape)
+
 
 def extract_and_move_file(downloads_dir, landsat_dir, bands_folder_name, ndvi_folder_name):
     """
