@@ -347,6 +347,8 @@ def prepare_and_run_chromium(chromedriver_path, downloads_dir):
 
     #options.headless('--headless')
 
+    options.add_argument("--headless")
+
     ''' 
         <- bug  
     '''
