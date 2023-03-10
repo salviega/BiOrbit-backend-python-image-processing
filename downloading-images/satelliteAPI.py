@@ -207,13 +207,13 @@ class LandsatAPI:
                 TODO: The conde continue, here.
             '''
 
-    def processing(self, protected_area_name, protected_area_total_extension, protected_area_dir, protected_area_shape_dir, bands_folder, ndvi_folder):
+    def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir, protected_area_shape_dir, bands_folder, ndvi_folder):
 
         # Open shapes file
         with fiona.open(protected_area_shape_dir, "r") as panel, fiona.open(protected_area_shape_dir, "r") as protected_area_src:
             protected_area_shape = [feature['geometry'] for feature in protected_area_src]
 
-        '''# clip to panel
+        # clip to panel
         tif_list = get_filelist(protected_area_dir, bands_folder, '*.TIF')
         clip_raster_on_mask(protected_area_shape, tif_list)
 
@@ -224,7 +224,7 @@ class LandsatAPI:
         # convert DN to Radiance
         tif_list = get_filelist(protected_area_dir, bands_folder, '*.TIF')
         metadata_list = get_filelist(protected_area_dir, bands_folder, '*MTL.txt')
-        generate_atmospheric_correction(tif_list, metadata_list)'''
+        generate_atmospheric_correction(tif_list, metadata_list)
 
         # NDVI
         tif_list = get_filelist(protected_area_dir, bands_folder, '*.tif')

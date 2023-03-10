@@ -37,9 +37,9 @@ def get_filelist(landsat_dir, bands_folder, format_name):
     files = os.path.join(landsat_dir, landsat_date_folder)
     landsat_bands_folder = [folder for folder in os.listdir(files) if folder.endswith(bands_folder)]
     bands_tiff_folder = os.path.join(files, landsat_bands_folder[0])
-    tiflist = sorted(glob.glob(os.path.join(bands_tiff_folder, format_name)))
+    file_list = sorted(glob.glob(os.path.join(bands_tiff_folder, format_name)))
 
-    return tiflist
+    return file_list
 
 
 def change_crs(latitude, longitude,pnnsfl_panel_path, geojson_path):
