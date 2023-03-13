@@ -2,6 +2,7 @@ from math import cos
 import numpy as np
 import xarray as xr
 import rioxarray as rxr
+import os
 
 
 def radiometric_rescaling_coefficients(path_landsat8_metadata, band):
@@ -24,24 +25,31 @@ def radiometric_rescaling_coefficients(path_landsat8_metadata, band):
         return rescaling_coefficients
 
 
-def reflectance_rescaling_coefficients(path_landsat8_metadata, band):
+def reflectance_rescaling_coefficients(protected_area_date, path_landsat8_metadata, band):
     with open(path_landsat8_metadata, 'r') as open_metaLandsat:
         content = open_metaLandsat.readlines()
         open_metaLandsat.close()
         rescaling_coefficients = []
         for line in content:
-                if 'REFLECTANCE_MULT_BAND_' + str(band) in line:
-                    print(line)
-                    multiplicative_rescaling = line.split()
-                    multiplicative_rescaling = float(multiplicative_rescaling[-1])
-                    rescaling_coefficients.append(multiplicative_rescaling)  # getting the G value
-                elif 'REFLECTANCE_ADD_BAND_' + str(band) in line:
-                    print(line)
-                    additive_rescaling = line.split()
-                    additive_rescaling = float(additive_rescaling[-1])
-                    rescaling_coefficients.append(additive_rescaling)  # Getting the B value
+            if 'REFLECTANCE_MULT_BAND_' + str(band) in line:
+                print(line)
+                multiplicative_rescaling = line.split()
+                multiplicative_rescaling = float(multiplicative_rescaling[-1])
+                rescaling_coefficients.append(multiplicative_rescaling)  # getting the G value
+            elif 'REFLECTANCE_ADD_BAND_' + str(band) in line:
+                print(line)
+                additive_rescaling = line.split()
+                additive_rescaling = float(additive_rescaling[-1])
+                rescaling_coefficients.append(additive_rescaling)  # Getting the B value
 
-        rescaling_coefficients = rescaling_coefficients[:-2]
+        filename = os.path.basename(protected_area_date)
+        split_folder = filename.split('-')
+
+        if 'LC08' in split_folder[-1]:
+            rescaling_coefficients = rescaling_coefficients[:-2]
+            return rescaling_coefficients
+
+        rescaling_coefficients = rescaling_coefficients[2:]
         return rescaling_coefficients
 
 

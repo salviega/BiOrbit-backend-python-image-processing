@@ -13,6 +13,7 @@ from rasterio.mask import mask
 
 
 def ndvi(band4_path, band5_path, shapes, output_path):
+
     with rasterio.open(band4_path) as band4:
         with rasterio.open(band5_path) as band5:
             red = band4.read(1)

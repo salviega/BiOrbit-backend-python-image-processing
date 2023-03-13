@@ -31,15 +31,15 @@ def get_folder(protected_area_dir, bands_folder):
     sorted_dir_list = sorted(dir_list)
 
     # Get the last directory in the sorted list
-    last_dir = sorted_dir_list[-1]
+    last_dir = sorted_dir_list[0]
 
-    last_folder_ndvi = os.path.join(last_dir, bands_folder)
-    return  last_folder_ndvi
+    last_folder_ndvi = os.path.join(last_dir)
+    return last_folder_ndvi
 
 
-def get_filelist(protected_area_dir, bands_folder, format_name):
-    # Get a list of all the directories in the protected_area_dir
-    dir_list = [os.path.join(protected_area_dir, d) for d in os.listdir(protected_area_dir) if os.path.isdir(os.path.join(protected_area_dir, d))]
+def get_filelist(protected_area_date, bands_folder, format_name):
+    # Get a list of all the directories in the protected_area_date
+    dir_list = [os.path.join(protected_area_date, d) for d in os.listdir(protected_area_date) if os.path.isdir(os.path.join(protected_area_date, d))]
 
     # Sort the list of directories in ascending order
     sorted_dir_list = sorted(dir_list)
@@ -47,12 +47,11 @@ def get_filelist(protected_area_dir, bands_folder, format_name):
     # Get the last directory in the sorted list
     last_dir = sorted_dir_list[-1]
 
-    last_folder_bands = os.path.join(last_dir, bands_folder)
+    last_folder_bands = os.path.join(last_dir)
 
     file_list = sorted(glob.glob(os.path.join(last_folder_bands, format_name)))
 
     return file_list
-
 
 def change_crs(latitude, longitude,pnnsfl_panel_path, geojson_path):
     # Load GeoJSON boundary and display it on a folium map
@@ -181,7 +180,7 @@ def affine_tif(tiflist):
     print("---")
 
 
-def generate_atmospheric_correction(tiflist, metadata):
+def generate_atmospheric_correction(protected_area_date, tiflist, metadata):
     """
     Generates atmospheric correction for each TIFF file in the input list, and saves the reflectance data as a new TIFF
     file with '_reflectance' appended to the original filename. The original TIFF file is deleted after processing.
@@ -195,12 +194,12 @@ def generate_atmospheric_correction(tiflist, metadata):
         print(f"Processing band {bandlist[i]} for {tif_path}")
         with rasterio.open(tif_path) as tif:
             arr = tif.read(1)
-            mp_reflactance, ap_reflectance = ac.reflectance_rescaling_coefficients(metadata[0], bandlist[i])
+            mp_reflactance, ap_reflectance = ac.reflectance_rescaling_coefficients(protected_area_date, metadata[0], bandlist[i])
             sume = ac.sun_elevation(metadata[0])
             reflectance = ac.radiance_to_reflectance(bandlist[i], arr, mp_reflactance, ap_reflectance, sume)
             profile = tif.profile.copy()
             profile.update(count=1, dtype='float64')
-            reflectance_path = os.path.splitext(tif_path)[0] + '_reflectance.tif'
+            reflectance_path = os.path.splitext(tif_path)[0] + '_reflectance.TIF'
             with rasterio.open(reflectance_path, 'w', **profile) as dst:
                 dst.write(reflectance, 1)
             send2trash(tif_path)
@@ -208,20 +207,21 @@ def generate_atmospheric_correction(tiflist, metadata):
     print("Atmospheric correction was successful.")
 
 
-def generate_ndvi(tiflist, landsat_dir, folder_name, shapes):
+def generate_ndvi(tif_list, protected_area_date, folder_name, shapes):
+
     # Extract red and near-infrared bands
-    red_band = tiflist[2]
-    nir_band = tiflist[3]
+    red_band = tif_list[2]
+    nir_band = tif_list[3]
 
     # Create NDVI folder
-    ndvi_folder = get_folder(landsat_dir, folder_name)
+    ndvi_folder = get_folder(protected_area_date, folder_name)
 
     # Calculate NDVI and save it to a file
     ndvi_file = os.path.join(ndvi_folder, 'NDVI.TIF')
-    #ndvi(red_band, nir_band, shapes, ndvi_file)
+    ndvi(red_band, nir_band, shapes, ndvi_file)
 
     # Convert forest NDVI and save it to a file
-    forest_ndvi(red_band, nir_band, shapes, 0.7, ndvi_file)
+    clipped_file, total_area = forest_ndvi(red_band, nir_band, shapes, 0.7, ndvi_file)
 
     # Convert NDVI to forest/not-forest classification and save it to a file
     #forest_not_forest(ndvi_file, shapes, 0.7, ndvi_file)
@@ -231,5 +231,10 @@ def generate_ndvi(tiflist, landsat_dir, folder_name, shapes):
     print("NDVI is ready")
     print("---")
     print("---")
+
+    return clipped_file, total_area
+
+
+
 
 

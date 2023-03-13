@@ -22,7 +22,7 @@ class LandsatAPI:
 
         self.username = username
         self.password = password
-        self.driver = prepare_and_run_chromium(chromedriver_path, downloads_dir)
+        self.driver = 10 # prepare_and_run_chromium(chromedriver_path, downloads_dir)
         self.download_folder = downloads_dir
         self.protected_area_dir = protected_area_dir
 
@@ -34,7 +34,11 @@ class LandsatAPI:
                 self.path = path,
                 self.path = row
 
-        # Log in to USGS
+        # Load login USGS website
+        self.driver.get('https://ers.cr.usgs.gov/login')
+        time.sleep(3)
+
+        # Login to USGS
         login_form = self.driver.find_element(By.ID, "loginForm")
         username_input = login_form.find_element(By.NAME, "username")
         username_input.send_keys(self.username)
@@ -51,7 +55,6 @@ class LandsatAPI:
         # Select coordinates types: decimals
         decimals_button = self.driver.find_element(By.XPATH, '//*[@id="lat_lon_section"]/fieldset/label[2]')
         decimals_button.click()
-        time.sleep(1)
 
         # Add coords
         for coord in coordinates:
@@ -59,13 +62,13 @@ class LandsatAPI:
             longitude = str(coord[0])
             coord_entry_add_button = self.driver.find_element(By.ID, "coordEntryAdd")
             coord_entry_add_button.click()
-            latitude_input = self.driver.find_element(By.XPATH, "/html/body/div[7]/div[2]/div[2]/input")
+            latitude_input = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[2]/div[2]/input")
             latitude_input.send_keys(latitude)
-            longitude_input = self.driver.find_element(By.XPATH, "/html/body/div[7]/div[2]/div[5]/input")
+            longitude_input = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[2]/div[5]/input")
             longitude_input.send_keys(longitude)
-            submit_button = self.driver.find_element(By.XPATH, "/html/body/div[7]/div[3]/div/button[1]")
+            submit_button = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div/button[1]")
             submit_button.click()
-        time.sleep(0.5)
+        time.sleep(8)
 
         # Add data range
         start, end = get_date_range(date_range)
@@ -92,8 +95,8 @@ class LandsatAPI:
                                                         "1]/ul/li[14]/ul/li[3]/ul/fieldset/li[1]/span/div[1]/input")
         subcategory_checkbox.click()
         result_button = self.driver.find_element(By.XPATH,
-                                                 "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div[3]/input[3]"
-                                                 )
+                                                 "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div["
+                                                 "3]/input[3]")
         result_button.click()
         time.sleep(3)
 
@@ -101,7 +104,7 @@ class LandsatAPI:
         # Select image for download
         html = self.driver.page_source
         soup = BeautifulSoup(html, "html.parser")
-        time.sleep(1)
+        time.sleep(1.2)
 
         # Extract number of images
         number_images = soup.find('th', {'class': 'ui-state-icons'}).get_text()
@@ -128,10 +131,9 @@ class LandsatAPI:
             result_content = soup.find_all(class_='resultRowContent')
             j = 0
             for content in result_content:
-                name = content.find('li').getText()
-                if 'LC09' in name:
-                    continue
 
+                name = content.find('li').getText()
+                print(name)
                 satellite_image = SatelliteImage()
                 satellite_image.name = name
                 satellite_image.data_acquired = content.find_all('li')[1].getText()
@@ -141,22 +143,24 @@ class LandsatAPI:
                 # Download image
                 downloads = self.driver.find_elements(By.CLASS_NAME, 'download')
                 downloads[j].click()
-                time.sleep(3)
+                time.sleep(8)
 
                 download_tabindex = self.driver.find_element(By.XPATH, "/html/body/div[6]")
 
                 product_options_button_download = download_tabindex.find_element(By.XPATH, '//*[@id="optionsContainer'
-                                                                                           '"]/div'
-                                                                                           '/div[1]/button')
+                                                                                           '"]/div/div[1]/button')
                 product_options_button_download.click()
                 time.sleep(3)
 
                 self.driver.execute_script("document.getElementsByClassName('btn btn-secondary "
                                            "secondaryDownloadButton')[0].click();")
+                                           
+                print('\n')
+                print(f'Image: {image + 1}')
+                print(satellite_image.name)
 
                 wait_for_downloads(self.download_folder)
                 wait_for_download_completion(self.download_folder)
-                print('\n')
                 time.sleep(1.5)
 
                 self.driver.execute_script("document.getElementsByClassName('btn btn-secondary "
@@ -166,12 +170,6 @@ class LandsatAPI:
                                                                                          '1]/button')
                 product_options_button_cancel.click()
 
-                time.sleep(0.5)
-
-                print('\n')
-                print(f'Image: {image + 1}')
-                print(satellite_image.name)
-
                 j += 1
                 image += 1
 
@@ -180,9 +178,10 @@ class LandsatAPI:
 
                     if page < pages:
                         page += 1
-                        next_page_button = self.driver.find_element(By.XPATH, '/html/body/div[1]/div/div/div[2]/div['
-                                                                              '2]/div[4]/form/div[2]/div[2]/div/div['
-                                                                              '2]/a[3]')
+                        next_page_button = self.driver.find_element(By.XPATH,
+                                                                    '/html/body/div[1]/div/div/div[2]/div['
+                                                                    '2]/div[4]/form/div[2]/div[2]/div/div['
+                                                                    '2]/a[3]')
                         next_page_button.click()
                         time.sleep(1.5)
 
@@ -191,84 +190,79 @@ class LandsatAPI:
                         print('\n')
                         print('=====================================')
                         print('The satellite images were downloaded!')
-                        break
 
-            time.sleep(1.5)
-            self.driver.close()
-            extract_and_move_file(self.download_folder, self.protected_area_dir, 'band', 'NDVI')
+        time.sleep(1.5)
+        self.driver.close()
 
-            '''
-                TODO: The conde continue, here.
-            '''
 
     def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir,
-                   protected_area_shape_dir, bands_folder, ndvi_folder):
+                   protected_area_shape_path, bands_folder, ndvi_folder):
+
+        extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands', 'NDVI')
 
         # Open shapes file
-        with fiona.open(protected_area_shape_dir, "r") as panel, fiona.open(protected_area_shape_dir,
-                                                                            "r") as protected_area_src:
+
+        with fiona.open(protected_area_shape_path, "r") as panel, fiona.open(protected_area_shape_path,
+                                                                             "r") as protected_area_src:
             protected_area_shape = [feature['geometry'] for feature in protected_area_src]
 
-        # clip to panel
-        tif_list = get_filelist(protected_area_dir, bands_folder, '*.TIF')
-        clip_raster_on_mask(protected_area_shape, tif_list)
+        protected_area_dates = get_sorted_folders(self.protected_area_dir)
+        print(protected_area_dates)
+        for protected_area_date in protected_area_dates:
 
-        # affine shapes
-        tif_list = get_filelist(protected_area_dir, bands_folder, '*.TIF')
-        affine_tif(tif_list)
+            # clip to panel
+            tif_list = get_filelist(protected_area_date, bands_folder, "*.TIF")
+            clip_raster_on_mask(protected_area_shape, tif_list)
 
-        # convert DN to Radiance
-        tif_list = get_filelist(protected_area_dir, bands_folder, '*.TIF')
-        metadata_list = get_filelist(protected_area_dir, bands_folder, '*MTL.txt')
-        generate_atmospheric_correction(tif_list, metadata_list)
+            # affine shapes
+            tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
+            affine_tif(tif_list)
 
-        # NDVI
-        tif_list = get_filelist(protected_area_dir, bands_folder, '*.tif')
-        protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_dir,
-                                                                                     ndvi_folder, protected_area_shape)
+            # convert DN to Radiance
+            tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
+            metadata_list = get_filelist(protected_area_date, bands_folder, '*MTL.txt')
+            generate_atmospheric_correction(protected_area_date, tif_list, metadata_list)
+
+            # NDVI
+            tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
+            protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_date,
+                                                                                         ndvi_folder,
+                                                                                         protected_area_shape)
 
 
-def extract_and_move_file(downloads_dir, landsat_dir, bands_folder_name, ndvi_folder_name):
-    """
-    Extracts the downloaded file, moves the extracted folder to Landsat8 folder with a new name, and removes the
-    downloaded file.
-    """
-    # Extract the downloaded files
-    files = glob.glob(downloads_dir + '/*.tar')
-    for file in files:
-        try:
-            file_name = os.path.basename(file)
-            file_name_without_ext = os.path.splitext(file_name)[0]
-            file_folder_name = file_name_without_ext.replace('_', ' ').split()
-            name = file_folder_name[3]
-            name = name[:4] + '-' + name[4:]
-            name = name[:7] + '-' + name[7:]
 
-            with tarfile.open(file) as tar:
-                tar.extractall(os.path.join(downloads_dir, file_name_without_ext))
-            tar.close()
+def extract_and_move_file(download_folder, protected_area_dir, bands_folder_name, ndvi_folder_name):
+    # Get the latest downloaded file
+    tar_list = glob.glob(os.path.join(download_folder, '*.tar'))
 
-            # Move to trash .tar
-            send2trash(file)
+    for tar_file in tar_list:
+        # Extract the downloaded file to a folder
+        extract_dir = os.path.splitext(tar_file)[0]
+        tar = tarfile.open(tar_file)
+        tar.extractall(extract_dir)
+        tar.close()
 
-            # Move extracted folder to Landsat8 folder with a new name
-            extracted_folder = os.path.join(downloads_dir, file_name_without_ext)
-            new_folder = os.path.join(landsat_dir, name)
+        # Move the downloaded file to the trash folder
+        send2trash(tar_file)
 
-            if not os.path.exists(new_folder):
+        # Move the extracted folder to the Landsat8 folder
+        dir_name = os.path.basename(os.path.normpath(extract_dir))
+        split_folder = dir_name.split('_')
+        name = split_folder[3]
+        name = name[:4] + '-' + name[4:]
+        name = name[:7] + '-' + name[7:] + '-' + split_folder[0]
+        new_folder = os.path.join(protected_area_dir, name)
+        os.makedirs(new_folder, exist_ok=True)
+        move_dir = os.path.join(download_folder, dir_name)
+        shutil.move(move_dir, new_folder)
+        on_newfolder = os.path.join(new_folder, dir_name)
+        os.rename(on_newfolder, os.path.join(new_folder, bands_folder_name))
 
-                os.makedirs(new_folder, exist_ok=True)
-                shutil.move(extracted_folder, os.path.join(new_folder))
+        # Create NDVI directory
+        ndvi_folder_path = os.path.join(new_folder, ndvi_folder_name)
+        os.makedirs(ndvi_folder_path, exist_ok=True)
 
-            else:
-                send2trash(os.path.join(downloads_dir, file_name_without_ext))
-
-        except:
-            continue
-
-    print('\n')
-    print('===================================')
-    print("The satellite images were extracted")
+    print("Satellite images are ready")
 
 
 def get_date_range_for_download(landsat_folder):
@@ -359,10 +353,6 @@ def prepare_and_run_chromium(chromedriver_path, downloads_dir):
     driver = webdriver.Chrome(service=service, options=options)
     driver.execute_cdp_cmd("Page.setDownloadBehavior", {"behavior": "allow", "downloadPath": downloads_dir})
 
-    # Load the website and wait for 3 seconds
-    driver.get('https://ers.cr.usgs.gov/login')
-    time.sleep(3)
-
     # Return the driver object
     return driver
 
@@ -391,3 +381,15 @@ def get_date_range(date_range_days):
 
     # Return the start and end dates as a tuple
     return start_str, end
+
+
+def get_sorted_folders(path):
+    """
+    Returns a list of all folders in the specified path, sorted by name.
+    """
+    folder_paths = []
+    for item in os.listdir(path):
+        item_path = os.path.join(path, item)
+        if os.path.isdir(item_path):
+            folder_paths.append(item_path)
+    return folder_paths

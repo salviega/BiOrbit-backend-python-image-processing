@@ -134,12 +134,14 @@ ndvi_folder = config('NDVI_FOLDER')
 
 
 protected_area_dir = create_folder(protected_area_name, landsat_dir)
-protected_area_shape_dir, protected_area_total_extension = create_shapefile(geojson_path, protected_area_name, protected_area_dir)
+protected_area_shape_dir, protected_area_total_extension = create_shapefile(geojson_path, protected_area_name,
+                                                                            protected_area_dir)
 # geojson_path = save_geojson_to_folder(geojson_path, protected_area_dir, protected_area_name)
 footprint = get_footprint(geojson_path)
 
 api = LandsatAPI(username, password, chromedriver_path, downloads_dir, protected_area_dir)
-api.query(footprint, 45)
-# api.processing(protected_area_name, protected_area_total_extension, protected_area_dir, footprint, protected_area_shape_dir, bands_folder, ndvi_folder)
+#api.query(footprint, 15)
+api.processing(protected_area_name, protected_area_total_extension, protected_area_dir, footprint,
+               protected_area_shape_dir, bands_folder, ndvi_folder)
 
 
