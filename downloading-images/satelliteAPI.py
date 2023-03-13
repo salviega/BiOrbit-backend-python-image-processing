@@ -1,16 +1,12 @@
 # Standard library imports
 import datetime
 from datetime import timedelta
-import glob
-import os
 import shutil
 import tarfile
 import time
 
 # Third-party library imports
 from bs4 import BeautifulSoup
-import folium
-import geopandas as gpd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -20,12 +16,13 @@ from send2trash import send2trash
 # Project-specific library imports
 from processing import *
 
+
 class LandsatAPI:
     def __init__(self, username, password, chromedriver_path, downloads_dir, protected_area_dir):
 
         self.username = username
         self.password = password
-        self.driver = 10 # prepare_and_run_chromium(chromedriver_path, downloads_dir)
+        self.driver = prepare_and_run_chromium(chromedriver_path, downloads_dir)
         self.download_folder = downloads_dir
         self.protected_area_dir = protected_area_dir
 
@@ -98,12 +95,13 @@ class LandsatAPI:
                                                  "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div[3]/input[3]"
                                                  )
         result_button.click()
-        time.sleep(2)
+        time.sleep(3)
 
         # Next page: Results
         # Select image for download
         html = self.driver.page_source
         soup = BeautifulSoup(html, "html.parser")
+        time.sleep(1)
 
         # Extract number of images
         number_images = soup.find('th', {'class': 'ui-state-icons'}).get_text()
@@ -143,37 +141,32 @@ class LandsatAPI:
                 # Download image
                 downloads = self.driver.find_elements(By.CLASS_NAME, 'download')
                 downloads[j].click()
-                time.sleep(1.5)
+                time.sleep(3)
 
                 download_tabindex = self.driver.find_element(By.XPATH, "/html/body/div[6]")
 
-                product_options_button = download_tabindex.find_element(By.XPATH, '//*[@id="optionsContainer"]/div'
-                                                                                  '/div[1]/button')
-                product_options_button.click()
-                time.sleep(1.5)
+                product_options_button_download = download_tabindex.find_element(By.XPATH, '//*[@id="optionsContainer'
+                                                                                           '"]/div'
+                                                                                           '/div[1]/button')
+                product_options_button_download.click()
+                time.sleep(3)
 
-                '''
-                    TODO: product_bundle_button isn't downloading the image
-                '''
-
-                product_bundle_button = self.driver.find_element(By.XPATH, '/html/body/div[6]/div[2]/div/div['
-                                                                           '2]/div/div[2]/div/div/div[2]/div[2]/button')
-                product_bundle_button.click()
+                self.driver.execute_script("document.getElementsByClassName('btn btn-secondary "
+                                           "secondaryDownloadButton')[0].click();")
 
                 wait_for_downloads(self.download_folder)
                 wait_for_download_completion(self.download_folder)
                 print('\n')
                 time.sleep(1.5)
 
-                cancel_button = self.driver.find_element(By.XPATH,
-                                                         '//*[@id="632210d4770592cf_Modal"]/div/div/div[1]/div['
-                                                         '2]/button')
-                cancel_button.click()
-                time.sleep(1.5)
+                self.driver.execute_script("document.getElementsByClassName('btn btn-secondary "
+                                           "closeProductOptionsButton')[0].click();")
 
-                ''' 
-                    <- bug  
-                '''
+                product_options_button_cancel = download_tabindex.find_element(By.XPATH, '/html/body/div[7]/div['
+                                                                                         '1]/button')
+                product_options_button_cancel.click()
+
+                time.sleep(0.5)
 
                 print('\n')
                 print(f'Image: {image + 1}')
@@ -198,19 +191,22 @@ class LandsatAPI:
                         print('\n')
                         print('=====================================')
                         print('The satellite images were downloaded!')
-                        time.sleep(1.5)
-                        self.driver.quit()
+                        break
 
+            time.sleep(1.5)
+            self.driver.close()
             extract_and_move_file(self.download_folder, self.protected_area_dir, 'band', 'NDVI')
 
             '''
                 TODO: The conde continue, here.
             '''
 
-    def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir, protected_area_shape_dir, bands_folder, ndvi_folder):
+    def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir,
+                   protected_area_shape_dir, bands_folder, ndvi_folder):
 
         # Open shapes file
-        with fiona.open(protected_area_shape_dir, "r") as panel, fiona.open(protected_area_shape_dir, "r") as protected_area_src:
+        with fiona.open(protected_area_shape_dir, "r") as panel, fiona.open(protected_area_shape_dir,
+                                                                            "r") as protected_area_src:
             protected_area_shape = [feature['geometry'] for feature in protected_area_src]
 
         # clip to panel
@@ -228,7 +224,8 @@ class LandsatAPI:
 
         # NDVI
         tif_list = get_filelist(protected_area_dir, bands_folder, '*.tif')
-        protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_dir, ndvi_folder, protected_area_shape)
+        protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_dir,
+                                                                                     ndvi_folder, protected_area_shape)
 
 
 def extract_and_move_file(downloads_dir, landsat_dir, bands_folder_name, ndvi_folder_name):
@@ -345,9 +342,7 @@ def prepare_and_run_chromium(chromedriver_path, downloads_dir):
         TODO: Fix the headless
     '''
 
-    #options.headless('--headless')
-
-    options.add_argument("--headless")
+    # options.headless('--headless')
 
     ''' 
         <- bug  
