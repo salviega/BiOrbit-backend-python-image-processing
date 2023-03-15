@@ -15,16 +15,19 @@ from send2trash import send2trash
 
 # Project-specific library imports
 from processing import *
+from NDVI import  *
 
 
 class LandsatAPI:
-    def __init__(self, username, password, chromedriver_path, downloads_dir, protected_area_dir):
+    def __init__(self, username, password, chromedriver_path, downloads_dir, protected_area_dir,
+                 protected_area_deforestation_dir):
 
         self.username = username
         self.password = password
-        self.driver = 10 # prepare_and_run_chromium(chromedriver_path, downloads_dir)
+        self.driver = prepare_and_run_chromium(chromedriver_path, downloads_dir)
         self.download_folder = downloads_dir
         self.protected_area_dir = protected_area_dir
+        self.protected_area_deforestation_dir = protected_area_deforestation_dir
 
     def query(self, coordinates, date_range):
         class SatelliteImage:
@@ -58,17 +61,16 @@ class LandsatAPI:
 
         # Add coords
         for coord in coordinates:
+            time.sleep(1)
             latitude = str(coord[1])
             longitude = str(coord[0])
             coord_entry_add_button = self.driver.find_element(By.ID, "coordEntryAdd")
             coord_entry_add_button.click()
-            latitude_input = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[2]/div[2]/input")
-            latitude_input.send_keys(latitude)
-            longitude_input = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[2]/div[5]/input")
-            longitude_input.send_keys(longitude)
-            submit_button = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div/button[1]")
-            submit_button.click()
-        time.sleep(8)
+            self.driver.execute_script("document.getElementsByClassName('latitude txtbox decimalBox')[1].click();")
+            self.driver.execute_script(f"document.getElementsByClassName('latitude txtbox decimalBox')[1].value = {latitude};")
+            self.driver.execute_script("document.getElementsByClassName('longitude txtbox decimalBox')[1].click();")
+            self.driver.execute_script(f"document.getElementsByClassName('longitude txtbox decimalBox')[1].value = {longitude};")
+            self.driver.execute_script(f"document.getElementsByClassName('ui-button ui-corner-all ui-widget')[7].click();")
 
         # Add data range
         start, end = get_date_range(date_range)
@@ -77,26 +79,27 @@ class LandsatAPI:
         end_date_input = self.driver.find_element(By.ID, "end_linked")
         end_date_input.send_keys(end)
         search_button = self.driver.find_element(By.XPATH,
-                                                 "/html/body/div[1]/div/div/div[2]/div[2]/div[1]/div[10]/input[1]")
+                                                 "/html/body/div[2]/div/div/div[2]/div[2]/div[1]/div[10]/input[1]")
         search_button.click()
+        time.sleep(5)
 
         # Next page: Data Sets
         # Select dataset(s):
         category_button = self.driver.find_element(By.XPATH,
-                                                   "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div["
-                                                   "1]/ul/li[14]/span/div")
+                                                   "/html/body/div[2]/div/div/div[2]/div[2]/div[2]/div[3]/div["
+                                                   "1]/ul/li[14]/div")
         category_button.click()
         subcategory_button = self.driver.find_element(By.XPATH,
-                                                      "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div["
-                                                      "1]/ul/li[14]/ul/li[3]/span/div")
+                                                      "/html/body/div[2]/div/div/div[2]/div[2]/div[2]/div[3]/div["
+                                                      "1]/ul/li[14]/ul/li[3]/div")
         subcategory_button.click()
         subcategory_checkbox = self.driver.find_element(By.XPATH,
-                                                        "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div["
+                                                        "/html/body/div[2]/div/div/div[2]/div[2]/div[2]/div[3]/div["
                                                         "1]/ul/li[14]/ul/li[3]/ul/fieldset/li[1]/span/div[1]/input")
         subcategory_checkbox.click()
         result_button = self.driver.find_element(By.XPATH,
-                                                 "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div["
-                                                 "3]/input[3]")
+                                                 "/html/body/div[2]/div/div/div[2]/div[2]/div[2]/div[3]/div[3]"
+                                                 "/input[3]")
         result_button.click()
         time.sleep(3)
 
@@ -104,7 +107,7 @@ class LandsatAPI:
         # Select image for download
         html = self.driver.page_source
         soup = BeautifulSoup(html, "html.parser")
-        time.sleep(1.2)
+        time.sleep(5)
 
         # Extract number of images
         number_images = soup.find('th', {'class': 'ui-state-icons'}).get_text()
@@ -143,7 +146,7 @@ class LandsatAPI:
                 # Download image
                 downloads = self.driver.find_elements(By.CLASS_NAME, 'download')
                 downloads[j].click()
-                time.sleep(8)
+                time.sleep(3)
 
                 download_tabindex = self.driver.find_element(By.XPATH, "/html/body/div[6]")
 
@@ -152,7 +155,7 @@ class LandsatAPI:
                 product_options_button_download.click()
                 time.sleep(3)
 
-                self.driver.execute_script("document.getElementsByClassName('btn btn-secondary "
+                '''self.driver.execute_script("document.getElementsByClassName('btn btn-secondary "
                                            "secondaryDownloadButton')[0].click();")
                                            
                 print('\n')
@@ -160,15 +163,13 @@ class LandsatAPI:
                 print(satellite_image.name)
 
                 wait_for_downloads(self.download_folder)
-                wait_for_download_completion(self.download_folder)
-                time.sleep(1.5)
+                wait_for_download_completion(self.download_folder)'''
+                # time.sleep(1.5)
 
                 self.driver.execute_script("document.getElementsByClassName('btn btn-secondary "
                                            "closeProductOptionsButton')[0].click();")
 
-                product_options_button_cancel = download_tabindex.find_element(By.XPATH, '/html/body/div[7]/div['
-                                                                                         '1]/button')
-                product_options_button_cancel.click()
+                self.driver.find_element(By.XPATH, "/html/body/div[8]/div[1]/button")
 
                 j += 1
                 image += 1
@@ -196,9 +197,9 @@ class LandsatAPI:
 
 
     def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir,
-                   protected_area_shape_path, bands_folder, ndvi_folder):
+                   protected_area_shape_path, bands_folder, ndvi_folder, deforestation_folder):
 
-        extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands', 'NDVI')
+        extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
 
         # Open shapes file
 
@@ -206,12 +207,13 @@ class LandsatAPI:
                                                                              "r") as protected_area_src:
             protected_area_shape = [feature['geometry'] for feature in protected_area_src]
 
-        protected_area_dates = get_sorted_folders(self.protected_area_dir)
-        print(protected_area_dates)
+        protected_area_dates = get_sorted_tif_list(self.protected_area_dir, deforestation_folder)
+
         for protected_area_date in protected_area_dates:
 
             # clip to panel
             tif_list = get_filelist(protected_area_date, bands_folder, "*.TIF")
+            print(tif_list)
             clip_raster_on_mask(protected_area_shape, tif_list)
 
             # affine shapes
@@ -226,8 +228,32 @@ class LandsatAPI:
             # NDVI
             tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
             protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_date,
-                                                                                         ndvi_folder,
+                                                                                         ndvi_folder + '_folder',
                                                                                          protected_area_shape)
+        for i, protected_area_date in enumerate(protected_area_dates):
+            filename_1 = 'ndvi_folder/forest_NDVI_mask_clipped.tif'
+            filename_2 = 'forest_NDVI_mask_clipped.tif'
+
+            if i == 0:
+                ndvi_date = os.path.join(protected_area_date, filename_1)
+                with rasterio.open(ndvi_date) as src:
+                    band_forest = src.read(1)
+                    pixel_size = src.res[0] * src.res[1]  # assuming square pixels
+                    # Create a mask of the pixels greater than 0
+                    new_mask = band_forest > 0
+                    # Count the number of pixels greater than 0
+                    num_pixels = np.count_nonzero(new_mask)
+                    # Calculate the total area of the pixels greater than 0 in hectares
+                    total_area = num_pixels * pixel_size / 10000
+                    print(f"Total area of NDVI: {total_area} hectares")
+                    continue
+            ndvi_before_date_dir = get_folder(protected_area_dates[i-1], ndvi_folder)
+            ndvi_before_date = os.path.join(ndvi_before_date_dir, filename_2)
+            ndvi_current_date_dir = get_folder(protected_area_dates[i], ndvi_folder)
+            ndvi_current_date = os.path.join(ndvi_current_date_dir, filename_2)
+
+
+            replace_nan_values(ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir)
 
 
 
@@ -256,6 +282,7 @@ def extract_and_move_file(download_folder, protected_area_dir, bands_folder_name
         move_dir = os.path.join(download_folder, dir_name)
         shutil.move(move_dir, new_folder)
         on_newfolder = os.path.join(new_folder, dir_name)
+        print(new_folder)
         os.rename(on_newfolder, os.path.join(new_folder, bands_folder_name))
 
         # Create NDVI directory
@@ -383,13 +410,13 @@ def get_date_range(date_range_days):
     return start_str, end
 
 
-def get_sorted_folders(path):
+def get_sorted_tif_list(path, ignore_folder_name):
     """
     Returns a list of all folders in the specified path, sorted by name.
     """
-    folder_paths = []
+    tif_list = []
     for item in os.listdir(path):
         item_path = os.path.join(path, item)
-        if os.path.isdir(item_path):
-            folder_paths.append(item_path)
-    return folder_paths
+        if os.path.isdir(item_path) and item != ignore_folder_name:
+            tif_list.append(item_path)
+    return sorted(tif_list)

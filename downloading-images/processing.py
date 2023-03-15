@@ -31,7 +31,7 @@ def get_folder(protected_area_dir, bands_folder):
     sorted_dir_list = sorted(dir_list)
 
     # Get the last directory in the sorted list
-    last_dir = sorted_dir_list[0]
+    last_dir = sorted_dir_list[-1]
 
     last_folder_ndvi = os.path.join(last_dir)
     return last_folder_ndvi
@@ -45,7 +45,7 @@ def get_filelist(protected_area_date, bands_folder, format_name):
     sorted_dir_list = sorted(dir_list)
 
     # Get the last directory in the sorted list
-    last_dir = sorted_dir_list[-1]
+    last_dir = sorted_dir_list[0]
 
     last_folder_bands = os.path.join(last_dir)
 
@@ -214,7 +214,7 @@ def generate_ndvi(tif_list, protected_area_date, folder_name, shapes):
     nir_band = tif_list[3]
 
     # Create NDVI folder
-    ndvi_folder = get_folder(protected_area_date, folder_name)
+    ndvi_folder = os.path.join(protected_area_date, folder_name)
 
     # Calculate NDVI and save it to a file
     ndvi_file = os.path.join(ndvi_folder, 'NDVI.TIF')

@@ -112,9 +112,20 @@ def forest_ndvi(band4_path, band5_path, shapes, threshold, output_path):
     return clipped_file, total_area
 
 
-def replace_nan_values(band1_path, band2_path, shapes, output_path):
+def replace_nan_values(before_band_path, current_band_path, output_path):
+    # Split the file path into components using the forward slash as the separator
+    before_band_path_components = before_band_path.split("/")
+    current_band_path_components = current_band_path.split("/")
+
+    # Get the date component from the path (assumes the date component is the third-last element in the path)
+    date_before_band_path_components = before_band_path_components[5]
+    date_current_band_path_components = current_band_path_components[5]
+
+    name = date_before_band_path_components + '__' + date_current_band_path_components
+    new_output_path = os.path.join(output_path, name + '.tiff')
+
     # Open both input bands using rasterio
-    with rasterio.open(band1_path) as src1, rasterio.open(band2_path) as src2:
+    with rasterio.open(before_band_path) as src1, rasterio.open(current_band_path) as src2:
         # Read the NDVI arrays for both bands
         ndvi_values1 = src1.read(1)
         ndvi_values2 = src2.read(1)
@@ -125,36 +136,20 @@ def replace_nan_values(band1_path, band2_path, shapes, output_path):
 
         # Create a new raster file with the same shape and metadata as the second input band
         metadata = src2.meta.copy()
-        metadata.update(dtype='float64')
-        with rasterio.open(output_path, 'w', **metadata) as dst:
+        with rasterio.open(new_output_path, 'w', **metadata) as dst:
             dst.write(ndvi_values2, 1)
 
             # Clip forest NDVI to the provided shapes
-            clipped_file = os.path.join(os.path.dirname(output_path), 'forest_NDVI_mask_clipped.tif')
-            with rasterio.open(output_path) as src:
-                out_image, out_transform = mask(src, shapes, crop=True)
-                out_meta = src.meta.copy()
-                out_meta.update({
-                    "driver": "GTiff",
-                    "height": out_image.shape[1],
-                    "width": out_image.shape[2],
-                    "transform": out_transform
-                })
-                with rasterio.open(clipped_file, "w", **out_meta) as dest:
-                    dest.write(out_image)
-
-            print('Forest NDVI mask clipped to provided shapes')
-
-            with rasterio.open(clipped_file) as src:
-                band_forest = src.read(1)
-                pixel_size = src.res[0] * src.res[1]  # assuming square pixels
-                # Create a mask of the pixels greater than 0
-                new_mask = band_forest > 0
-                # Count the number of pixels greater than 0
-                num_pixels = np.count_nonzero(new_mask)
-                # Calculate the total area of the pixels greater than 0 in hectares
-                total_area = num_pixels * pixel_size / 10000
-                print(f"Total area of forest/non-forest: {total_area} hectares")
+        with rasterio.open(new_output_path) as src:
+            band_forest = src.read(1)
+            pixel_size = src.res[0] * src.res[1]  # assuming square pixels
+            # Create a mask of the pixels greater than 0
+            new_mask = band_forest > 0
+            # Count the number of pixels greater than 0
+            num_pixels = np.count_nonzero(new_mask)
+            # Calculate the total area of the pixels greater than 0 in hectares
+            total_area = num_pixels * pixel_size / 10000
+            print(f"{name} Total area of NDVI: {total_area} hectares")
 
 
 def forest_not_forest(ndvi_file, shapes, threshold, output_path):
