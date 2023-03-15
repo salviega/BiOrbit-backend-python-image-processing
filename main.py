@@ -8,6 +8,8 @@ def print_hi(name):
     # Use a breakpoint in the code line below to debug your script.
     print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
 
+    # if LC08_L2SP_009056_20230218_20230223_02_T1
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
