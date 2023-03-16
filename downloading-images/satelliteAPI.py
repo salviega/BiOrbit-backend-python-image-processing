@@ -24,7 +24,7 @@ class LandsatAPI:
 
         self.username = username
         self.password = password
-        self.driver = 10 #prepare_and_run_chromium(chromedriver_path, downloads_dir)
+        self.driver = prepare_and_run_chromium(chromedriver_path, downloads_dir)
         self.download_folder = downloads_dir
         self.protected_area_dir = protected_area_dir
         self.protected_area_deforestation_dir = protected_area_deforestation_dir
@@ -51,7 +51,7 @@ class LandsatAPI:
                 password_input.send_keys(self.password)
                 login_button = login_form.find_element(By.ID, "loginButton")
                 login_button.click()
-                time.sleep(2)
+                time.sleep(3)
 
                 # Navigate to home page
                 self.driver.get('https://earthexplorer.usgs.gov')
@@ -63,7 +63,7 @@ class LandsatAPI:
 
                 # Add coords
                 for coord in coordinates:
-                    time.sleep(1)
+                    time.sleep(1.5)
                     latitude = str(coord[1])
                     longitude = str(coord[0])
                     coord_entry_add_button = self.driver.find_element(By.ID, "coordEntryAdd")
@@ -86,31 +86,25 @@ class LandsatAPI:
                 end_date_input = self.driver.find_element(By.ID, "end_linked")
                 end_date_input.send_keys(end)
                 search_button = self.driver.find_element(By.XPATH,
-                                                         "/html/body/div[2]/div/div/div[2]/div[2]/div[1]/div["
-                                                         "10]/input[1]")
+                                                         "/html/body/div[1]/div/div/div[2]/div[2]/div[1]/div[10]/input[1]")
                 search_button.click()
-                time.sleep(5)
+                time.sleep(3)
 
                 # Next page: Data Sets
                 # Select dataset(s):
                 category_button = self.driver.find_element(By.XPATH,
-                                                           "/html/body/div[2]/div/div/div[2]/div[2]/div[2]/div[3]/div["
-                                                           "1]/ul/li[14]/div")
+                                                           "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div[1]/ul/li[14]/div")
                 category_button.click()
                 subcategory_button = self.driver.find_element(By.XPATH,
-                                                              "/html/body/div[2]/div/div/div[2]/div[2]/div[2]/div["
-                                                              "3]/div[1]/ul/li[14]/ul/li[3]/div")
+                                                              "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div[1]/ul/li[14]/ul/li[3]/div")
                 subcategory_button.click()
                 subcategory_checkbox = self.driver.find_element(By.XPATH,
-                                                                "/html/body/div[2]/div/div/div[2]/div[2]/div[2]/div["
-                                                                "3]/div[1]/ul/li[14]/ul/li[3]/ul/fieldset/li["
-                                                                "1]/span/div[1]/input")
+                                                                "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div[1]/ul/li[14]/ul/li[3]/ul/fieldset/li[1]/span/div[1]/input")
                 subcategory_checkbox.click()
                 result_button = self.driver.find_element(By.XPATH,
-                                                         "/html/body/div[2]/div/div/div[2]/div[2]/div[2]/div[3]/div[3]"
-                                                         "/input[3]")
+                                                         "/html/body/div[1]/div/div/div[2]/div[2]/div[2]/div[3]/div[3]/input[3]")
                 result_button.click()
-                time.sleep(6)
+                time.sleep(3)
 
                 # Next page: Results
                 # Select image for download
@@ -126,7 +120,7 @@ class LandsatAPI:
 
                 html = self.driver.page_source
                 soup = BeautifulSoup(html, "html.parser")
-                time.sleep(2)
+                time.sleep(3)
 
                 # Extract number of images
                 number_images = soup.find('th', {'class': 'ui-state-icons'}).get_text()
@@ -151,6 +145,10 @@ class LandsatAPI:
                     print(f'Page: {page}')
                     print(f'Pages: {pages}')
 
+                    html = self.driver.page_source
+                    soup = BeautifulSoup(html, "html.parser")
+                    time.sleep(3)
+
                     result_content = soup.find_all(class_='resultRowContent')
                     j = 0
                     for content in result_content:
@@ -163,22 +161,82 @@ class LandsatAPI:
                         satellite_image.row = content.find_all('li')[3].getText()
 
                         # were images download yet?
-                        split_satellite_image_name = satellite_image.name.split('_')
-                        satellite_image_date = split_satellite_image_name[3]
+                        split_satellite_image_name = satellite_image.name.split(' ')
+                        satellite_image_name = split_satellite_image_name[1]
+                        image_enable = False
 
-                        if satellite_image_date in satellite_image_downloaded_date_list:
-                            print(f"{satellite_image_date} was already downloaded ")
-                            continue
+                        for tar in tar_list:
+                            if satellite_image_name in tar:
+                                image_enable = True
+
+                        if image_enable:
+                            print(f"{satellite_image_name} was already downloaded ")
+
+                            j += 1
+                            image += 1
+
+                            if j < len(result_content):
+                                continue
+
+                            # Change the page
+                            if j == len(result_content):
+
+                                if page < pages:
+                                    page += 1
+                                    next_page_button = self.driver.find_element(By.XPATH,
+                                                                                '/html/body/div[1]/div/div/div[2]/div[2]/div[4]/form/div[2]/div[2]/div/div[2]/a[3]')
+                                    next_page_button.click()
+                                    time.sleep(5)
+                                    break
+
+                                else:
+                                    page += 1
+                                    print('\n')
+                                    print('=====================================')
+                                    print('The satellite images were downloaded!')
+                                    break
 
                         # Download image
+                        time.sleep(0.5)
                         downloads = self.driver.find_elements(By.CLASS_NAME, 'download')
                         downloads[j].click()
-                        time.sleep(8)
+                        time.sleep(6)
 
-                        self.driver.execute_script("document.getElementsByClassName('btn btn-secondary downloadButton')[0].click();")
-                        time.sleep(3)
-                        print(':D')
-                        '''self.driver.execute_script("document.getElementsByClassName('btn btn-secondary "
+                        download_button = self.driver.execute_script(
+                            "return document.querySelector('.btn.btn-secondary.downloadButton')")
+
+                        if not download_button is None:
+
+                            self.driver.execute_script(
+                                "document.getElementsByClassName('ui-button ui-corner-all ui-widget "
+                                "ui-button-icon-only ui-dialog-titlebar-close')[2].click();")
+
+                            j += 1
+                            image += 1
+
+                            if j < len(result_content):
+                                continue
+
+                            # Change the page
+                            if j == len(result_content):
+                                if page < pages:
+                                    page += 1
+                                    next_page_button = self.driver.find_element(By.XPATH,
+                                                                                '/html/body/div[1]/div/div/div[2]/div[2]/div[4]/form/div[2]/div[2]/div/div[2]/a[3]')
+                                    next_page_button.click()
+                                    time.sleep(5)
+                                    break
+                                else:
+                                    page += 1
+                                    print('\n')
+                                    print('=====================================')
+                                    print('The satellite images were downloaded!')
+                                    break
+
+                        self.driver.execute_script(
+                            "document.getElementsByClassName('btn btn-secondary productOptionsButton')[0].click();")
+
+                        self.driver.execute_script("document.getElementsByClassName('btn btn-secondary "
                                                    "secondaryDownloadButton')[0].click();")
 
                         print('\n')
@@ -204,9 +262,7 @@ class LandsatAPI:
                             if page < pages:
                                 page += 1
                                 next_page_button = self.driver.find_element(By.XPATH,
-                                                                            '/html/body/div[2]/div/div/div[2]/div['
-                                                                            '2]/div[4]/form/div[2]/div[2]/div/div['
-                                                                            '2]/a[3]')
+                                                                            '/html/body/div[1]/div/div/div[2]/div[2]/div[4]/form/div[2]/div[2]/div/div[2]/a[3]')
                                 next_page_button.click()
                                 time.sleep(5)
 
@@ -214,18 +270,20 @@ class LandsatAPI:
                                 page += 1
                                 print('\n')
                                 print('=====================================')
-                                print('The satellite images were downloaded!')'''
+                                print('The satellite images were downloaded!')
 
                 time.sleep(1.5)
                 self.driver.close()
                 break
             except Exception as error:
                 print(f"Exception: {error}")
+                crdownload_list = glob.glob(os.path.join(self.download_folder, '.crdownload'))
+                for file in crdownload_list:
+                    os.remove(file)
                 time.sleep(1.5)
                 self.driver.close()
                 self.driver = prepare_and_run_chromium(chromedriver_path, downloads_dir)
                 continue
-
 
     def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir,
                    protected_area_shape_path, bands_folder, ndvi_folder, deforestation_folder):
@@ -289,7 +347,6 @@ class LandsatAPI:
             ndvi_current_date = os.path.join(ndvi_current_date_dir, filename_2)
 
             replace_nan_values(ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir)'''
-
 
 
 def extract_and_move_file(download_folder, protected_area_dir, bands_folder_name, ndvi_folder_name):
