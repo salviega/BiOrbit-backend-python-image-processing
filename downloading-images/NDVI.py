@@ -13,7 +13,6 @@ from rasterio.mask import mask
 
 
 def ndvi(band4_path, band5_path, shapes, output_path):
-
     with rasterio.open(band4_path) as band4:
         with rasterio.open(band5_path) as band5:
             red = band4.read(1)
@@ -112,20 +111,37 @@ def forest_ndvi(band4_path, band5_path, shapes, threshold, output_path):
     return clipped_file, total_area
 
 
-def replace_nan_values(before_band_path, current_band_path, output_path):
+def replace_nan_values(before_band_path, current_band_path, output_path, index):
     # Split the file path into components using the forward slash as the separator
     before_band_path_components = before_band_path.split("/")
     current_band_path_components = current_band_path.split("/")
 
     # Get the date component from the path (assumes the date component is the third-last element in the path)
-    date_before_band_path_components = before_band_path_components[5]
+    date_before_band_path_components = before_band_path_components[6]
+
+    if index == 1:
+        date_before_band_path_components = date_before_band_path_components.replace('__.tiff', '')
+
+    elif index == 2:
+        date_before_band_path_components = date_before_band_path_components.split('__')
+        print(date_before_band_path_components)
+        split_date_before_band_path_components = date_before_band_path_components.split('__')
+        date_before_band_path_components_placed = split_date_before_band_path_components[1]
+        date_before_band_path_components = date_before_band_path_components_placed.replace('.tiff', '')
+        '''else:
+        date_before_band_path_components = date_before_band_path_components.split('__')
+        print(date_before_band_path_components)
+        splited_date_before_band_path_components = date_before_band_path_components[1]
+        print(splited_date_before_band_path_components)'''
+
+
     date_current_band_path_components = current_band_path_components[5]
 
     name = date_before_band_path_components + '__' + date_current_band_path_components
     new_output_path = os.path.join(output_path, name + '.tiff')
 
     # Open both input bands using rasterio
-    with rasterio.open(before_band_path) as src1, rasterio.open(current_band_path) as src2:
+    '''with rasterio.open(before_band_path) as src1, rasterio.open(current_band_path) as src2:
         # Read the NDVI arrays for both bands
         ndvi_values1 = src1.read(1)
         ndvi_values2 = src2.read(1)
@@ -149,7 +165,7 @@ def replace_nan_values(before_band_path, current_band_path, output_path):
             num_pixels = np.count_nonzero(new_mask)
             # Calculate the total area of the pixels greater than 0 in hectares
             total_area = num_pixels * pixel_size / 10000
-            print(f"{name} Total area of NDVI: {total_area} hectares")
+            print(f"{name} Total area of NDVI: {total_area} hectares")'''
 
 
 def forest_not_forest(ndvi_file, shapes, threshold, output_path):
@@ -204,4 +220,3 @@ def forest_not_forest(ndvi_file, shapes, threshold, output_path):
         # Calculate the total area of the non-NaN pixels in hectares
         total_area = num_non_nan_pixels * pixel_size / 10000
         print(f"Total area of forest/non-forest: {total_area} hectares")
-

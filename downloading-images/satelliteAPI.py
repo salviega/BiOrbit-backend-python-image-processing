@@ -24,7 +24,7 @@ class LandsatAPI:
 
         self.username = username
         self.password = password
-        self.driver = prepare_and_run_chromium(chromedriver_path, downloads_dir)
+        self.driver = 10 # prepare_and_run_chromium(chromedriver_path, downloads_dir)
         self.download_folder = downloads_dir
         self.protected_area_dir = protected_area_dir
         self.protected_area_deforestation_dir = protected_area_deforestation_dir
@@ -88,7 +88,7 @@ class LandsatAPI:
                 search_button = self.driver.find_element(By.XPATH,
                                                          "/html/body/div[1]/div/div/div[2]/div[2]/div[1]/div[10]/input[1]")
                 search_button.click()
-                time.sleep(3)
+                time.sleep(6)
 
                 # Next page: Data Sets
                 # Select dataset(s):
@@ -264,7 +264,7 @@ class LandsatAPI:
                                 next_page_button = self.driver.find_element(By.XPATH,
                                                                             '/html/body/div[1]/div/div/div[2]/div[2]/div[4]/form/div[2]/div[2]/div/div[2]/a[3]')
                                 next_page_button.click()
-                                time.sleep(5)
+                                time.sleep(6)
 
                             else:
                                 page += 1
@@ -288,7 +288,7 @@ class LandsatAPI:
     def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir,
                    protected_area_shape_path, bands_folder, ndvi_folder, deforestation_folder):
 
-        # extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
+        extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
 
         # Open shapes file
 
@@ -298,7 +298,7 @@ class LandsatAPI:
 
         protected_area_dates = get_sorted_tif_list(self.protected_area_dir, deforestation_folder)
 
-        ''' for protected_area_date in protected_area_dates:
+        for protected_area_date in protected_area_dates:
 
             # clip to panel
             tif_list = get_filelist(protected_area_date, bands_folder, "*.TIF")
@@ -317,8 +317,9 @@ class LandsatAPI:
             tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
             protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_date,
                                                                                          ndvi_folder + '_folder',
-                                                                                         protected_area_shape)'''
-        for i, protected_area_date in enumerate(protected_area_dates):
+                                                                                         protected_area_shape)
+
+        '''for i, protected_area_date in enumerate(protected_area_dates):
             filename_1 = 'ndvi_folder/forest_NDVI_mask_clipped.tif'
             filename_2 = 'forest_NDVI_mask_clipped.tif'
 
@@ -340,13 +341,16 @@ class LandsatAPI:
                 output_file = os.path.join(self.protected_area_deforestation_dir, split_name[-1] + '__.tiff')
 
                 shutil.copy(ndvi_date, output_file)
+                continue
 
-            '''ndvi_before_date_dir = get_folder(protected_area_dates[i-1], deforestation_folder)
-            ndvi_before_date = os.path.join(ndvi_before_date_dir, filename_2)
-            ndvi_current_date_dir = get_folder(protected_area_dates[i], ndvi_folder)
-            ndvi_current_date = os.path.join(ndvi_current_date_dir, filename_2)
+            deforestation_tiff_list = glob.glob(self.protected_area_deforestation_dir + '/*.tiff')
 
-            replace_nan_values(ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir)'''
+            if i < 4:
+                ndvi_before_date = os.path.join(deforestation_tiff_list[i-1])
+                ndvi_current_date_dir = get_folder(protected_area_dates[i], ndvi_folder)
+                ndvi_current_date = os.path.join(ndvi_current_date_dir, filename_2)
+
+                replace_nan_values(ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir, i)'''
 
 
 def extract_and_move_file(download_folder, protected_area_dir, bands_folder_name, ndvi_folder_name):

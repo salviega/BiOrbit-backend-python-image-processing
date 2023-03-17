@@ -1,8 +1,17 @@
-from math import cos
-import numpy as np
-import xarray as xr
-import rioxarray as rxr
+# Standard library imports
 import os
+import numpy as np
+from math import cos
+
+# Third-party library imports
+import rasterio
+import unpackqa
+import rioxarray as rxr
+import xarray as xr
+
+# External library imports
+
+# Project-specific library imports
 
 
 def radiometric_rescaling_coefficients(path_landsat8_metadata, band):
@@ -26,6 +35,10 @@ def radiometric_rescaling_coefficients(path_landsat8_metadata, band):
 
 
 def reflectance_rescaling_coefficients(protected_area_date, path_landsat8_metadata, band):
+    """
+    extract the reflectance rescaling coefficients from Landsat metadata. These coefficients are used to convert the
+    raw digital numbers (DN) to at-sensor reflectance values.
+    """
     with open(path_landsat8_metadata, 'r') as open_metaLandsat:
         content = open_metaLandsat.readlines()
         open_metaLandsat.close()
@@ -126,6 +139,15 @@ def radiance_to_reflectance(band, arr, Mp, Ap, SUME):
     new_data_array = new_data_array / cos(θSZ)
     return new_data_array
 
+
+def apply_cloud_mask(qa_path, product='LANDSAT_8_C2_L2_QAPixel', flags=['Cloud', 'Cloud Shadow']):
+    # Apply a cloud mask to an image using Landsat Quality Assessment (QA) data
+    with rasterio.open(qa_path) as src:
+        qa_data = src.read(1)
+
+    cloud_mask = unpackqa.unpack_to_dict(qa_data, product=product, flags=flags)
+
+    return cloud_mask
 
 def combine_tifs(tif_list):
     """A function that combines a list of tifs in the same CRS

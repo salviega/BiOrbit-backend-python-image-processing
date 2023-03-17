@@ -3,7 +3,6 @@ import glob
 import os
 
 # Third-party library imports
-from decouple import config
 import geopandas as gpd
 import fiona
 import folium
@@ -221,7 +220,7 @@ def generate_ndvi(tif_list, protected_area_date, folder_name, shapes):
     ndvi(red_band, nir_band, shapes, ndvi_file)
 
     # Convert forest NDVI and save it to a file
-    clipped_file, total_area = forest_ndvi(red_band, nir_band, shapes, 0.7, ndvi_file)
+    clipped_file, total_area = forest_ndvi(red_band, nir_band, shapes, 0.3, ndvi_file)
 
     # Convert NDVI to forest/not-forest classification and save it to a file
     #forest_not_forest(ndvi_file, shapes, 0.7, ndvi_file)
