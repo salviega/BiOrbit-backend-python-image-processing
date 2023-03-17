@@ -288,7 +288,7 @@ class LandsatAPI:
     def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir,
                    protected_area_shape_path, bands_folder, ndvi_folder, deforestation_folder):
 
-        extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
+        # extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
 
         # Open shapes file
 
@@ -298,7 +298,7 @@ class LandsatAPI:
 
         protected_area_dates = get_sorted_tif_list(self.protected_area_dir, deforestation_folder)
 
-        for protected_area_date in protected_area_dates:
+        '''for protected_area_date in protected_area_dates:
 
             # clip to panel
             tif_list = get_filelist(protected_area_date, bands_folder, "*.TIF")
@@ -317,9 +317,9 @@ class LandsatAPI:
             tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
             protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_date,
                                                                                          ndvi_folder + '_folder',
-                                                                                         protected_area_shape)
+                                                                                         protected_area_shape)'''
 
-        '''for i, protected_area_date in enumerate(protected_area_dates):
+        for i, protected_area_date in enumerate(protected_area_dates):
             filename_1 = 'ndvi_folder/forest_NDVI_mask_clipped.tif'
             filename_2 = 'forest_NDVI_mask_clipped.tif'
 
@@ -343,14 +343,13 @@ class LandsatAPI:
                 shutil.copy(ndvi_date, output_file)
                 continue
 
-            deforestation_tiff_list = glob.glob(self.protected_area_deforestation_dir + '/*.tiff')
+            deforestation_tiff_list = sorted(glob.glob(os.path.join(self.protected_area_deforestation_dir, '*.tiff')))
 
-            if i < 4:
-                ndvi_before_date = os.path.join(deforestation_tiff_list[i-1])
-                ndvi_current_date_dir = get_folder(protected_area_dates[i], ndvi_folder)
-                ndvi_current_date = os.path.join(ndvi_current_date_dir, filename_2)
+            ndvi_before_date = os.path.join(deforestation_tiff_list[i-1])
+            ndvi_current_date_dir = get_folder(protected_area_dates[i], ndvi_folder)
+            ndvi_current_date = os.path.join(ndvi_current_date_dir, filename_2)
 
-                replace_nan_values(ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir, i)'''
+            replace_nan_values(ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir, i)
 
 
 def extract_and_move_file(download_folder, protected_area_dir, bands_folder_name, ndvi_folder_name):
