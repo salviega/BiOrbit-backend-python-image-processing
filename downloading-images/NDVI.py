@@ -7,7 +7,7 @@ import rasterio
 from rasterio.mask import mask
 
 # External library imports
-import gdal
+from osgeo import gdal
 
 # Project-specific library imports
 
