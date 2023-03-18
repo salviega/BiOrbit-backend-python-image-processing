@@ -6,8 +6,8 @@ import numpy as np
 import rasterio
 from rasterio.mask import mask
 
-
 # External library imports
+import gdal
 
 # Project-specific library imports
 
@@ -37,7 +37,7 @@ def ndvi(band4_path, band5_path, shapes, output_path):
     print('NDVI file created successfully')
 
     # Clip NDVI to the provided shapes
-    clipped_file = os.path.join(os.path.dirname(output_path), 'NDVI_mask_clipped.tif')
+    clipped_file = os.path.join(os.path.dirname(output_path), 'NDVI_mask_clipped.TIF')
     with rasterio.open(output_path) as src:
         out_image, out_transform = mask(src, shapes, crop=True)
         out_meta = src.meta.copy()
@@ -82,7 +82,7 @@ def forest_ndvi(band4_path, band5_path, shapes, threshold, output_path):
     print('NDVI file created successfully')
 
     # Clip forest NDVI to the provided shapes
-    clipped_file = os.path.join(os.path.dirname(output_path), 'forest_NDVI_mask_clipped.tif')
+    clipped_file = os.path.join(os.path.dirname(output_path), 'forest_NDVI_mask_clipped.TIF')
     with rasterio.open(output_path) as src:
         out_image, out_transform = mask(src, shapes, crop=True)
         out_meta = src.meta.copy()
@@ -121,21 +121,25 @@ def replace_nan_values(before_band_path, current_band_path, output_path, index):
     date_current_band_path_components = current_band_path_components[5]
 
     if index == 1:
-        date_before_band_path_components = date_before_band_path_components.replace('__.tiff', '')
+        date_before_band_path_components = date_before_band_path_components.replace('__.TIF', '')
 
     elif index >= 2:
         splited_before_band_path_components = date_before_band_path_components.split('__')
         new_date_before_band_path_components = splited_before_band_path_components[1]
-        date_before_band_path_components = new_date_before_band_path_components.replace('.tiff', '')
+        date_before_band_path_components = new_date_before_band_path_components.replace('.TIF', '')
 
     name = date_before_band_path_components + '__' + date_current_band_path_components
-    new_output_path = os.path.join(output_path, name + '.tiff')
+    new_output_path = os.path.join(output_path, name + '.TIF')
 
     # Open both input bands using rasterio
     with rasterio.open(before_band_path) as src1, rasterio.open(current_band_path) as src2:
         # Read the NDVI arrays for both bands
         ndvi_values1 = src1.read(1)
         ndvi_values2 = src2.read(1)
+
+        # Create a new raster file with the same shape and metadata as the second input band
+        metadata = src2.meta.copy()
+
 
         # Replace NaN values in the second image's NDVI array with corresponding values in the first image
         # if the values of the first image are not NaN
@@ -146,26 +150,10 @@ def replace_nan_values(before_band_path, current_band_path, output_path, index):
         with rasterio.open(new_output_path, 'w', **metadata) as dst:
             dst.write(ndvi_values2, 1)
 
-            '''
-                TODO: Fix
-            '''
-
-            # Clip forest NDVI to the provided shapes
-            with rasterio.open(new_output_path) as src:
-                band_forest = src.read(1)
-                pixel_size = src.res[0] * src.res[1]  # assuming square pixels
-                # Create a mask of the pixels greater than 0
-                new_mask = band_forest > 0
-                # Count the number of pixels greater than 0
-                num_pixels = np.count_nonzero(new_mask)
-                # Calculate the total area of the pixels greater than 0 in hectares
-                total_area = num_pixels * pixel_size / 10000
-                print(f"{name} Total area of NDVI: {total_area} hectares")
-
-            '''
-                <---
-            '''
-
+            # Calculate the area of pixels greater than 0 in hectares
+            pixel_size = metadata['transform'][0]
+            area = (ndvi_values2 > 0.6).sum() * (pixel_size ** 2) / 10000
+            print(f'Total area of NDVI: {area:.2f} hectares')
 
 
 def forest_not_forest(ndvi_file, shapes, threshold, output_path):
