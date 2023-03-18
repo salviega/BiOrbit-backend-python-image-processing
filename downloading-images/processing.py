@@ -225,12 +225,6 @@ def generate_ndvi(tif_list, protected_area_date, folder_name, shapes):
     # Convert NDVI to forest/not-forest classification and save it to a file
     #forest_not_forest(ndvi_file, shapes, 0.7, ndvi_file)
 
-    print("---")
-    print("---")
-    print("NDVI is ready")
-    print("---")
-    print("---")
-
     return clipped_file, total_area
 
 
