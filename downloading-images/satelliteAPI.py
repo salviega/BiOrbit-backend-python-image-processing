@@ -288,7 +288,7 @@ class LandsatAPI:
     def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir,
                    protected_area_shape_path, bands_folder, ndvi_folder, deforestation_folder):
 
-        # extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
+            # extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
 
         # Open shapes file
 
