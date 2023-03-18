@@ -288,7 +288,25 @@ class LandsatAPI:
     def processing(self, protected_area_name, protected_area_total_extension, footprint, protected_area_dir,
                    protected_area_shape_path, bands_folder, ndvi_folder, deforestation_folder):
 
-        extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
+        class ForestCover:
+            def __int__(self, protected_area_name, photo, description, footprint, last_detection_date,
+                        total_extension_protected_area, detection_date_list, total_extension_forest_cover_list):
+                self.protected_area_name = protected_area_name
+                self.photo = photo,
+                self.description = description,
+                self.coordinates = footprint,
+                self.last_detection_date = last_detection_date,
+                self.total_extension_protected_area = total_extension_protected_area,
+                self.detection_date_list = detection_date_list,
+                self.total_extension_forest_cover_list = total_extension_forest_cover_list
+
+        forest_cover = ForestCover()
+        forest_cover.last_detection_date = datetime.date.today()
+        forest_cover.total_extension_protected_area = protected_area_total_extension
+        forest_cover.detection_date_list = []
+        forest_cover.total_extension_forest_cover_list = []
+
+        #extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
 
         # Open shapes file
 
@@ -298,7 +316,7 @@ class LandsatAPI:
 
         protected_area_dates = get_sorted_tif_list(self.protected_area_dir, deforestation_folder)
 
-        for protected_area_date in protected_area_dates:
+        '''for protected_area_date in protected_area_dates:
 
             # clip to panel
             tif_list = get_filelist(protected_area_date, bands_folder, "*.TIF")
@@ -317,7 +335,7 @@ class LandsatAPI:
             tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
             protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_date,
                                                                                          ndvi_folder + '_folder',
-                                                                                         protected_area_shape)
+                                                                                         protected_area_shape)'''
 
         for i, protected_area_date in enumerate(protected_area_dates):
             filename_1 = 'ndvi_folder/forest_NDVI_mask_clipped.TIF'
@@ -335,10 +353,12 @@ class LandsatAPI:
                     # Calculate the total area of the pixels greater than 0 in hectares
                     total_area = num_pixels * pixel_size / 10000
                     print(f"Total area of NDVI: {total_area} hectares")
+                    forest_cover.total_extension_forest_cover_list.append(total_area)
 
                 # construct the new filename using ndvi_date
                 split_name = protected_area_date.split('/')
                 output_file = os.path.join(self.protected_area_deforestation_dir, split_name[-1] + '__.TIF')
+                forest_cover.detection_date_list.append(split_name[-1])
 
                 shutil.copy(ndvi_date, output_file)
                 continue
@@ -349,7 +369,9 @@ class LandsatAPI:
             ndvi_current_date_dir = get_folder(protected_area_dates[i], ndvi_folder)
             ndvi_current_date = os.path.join(ndvi_current_date_dir, filename_2)
 
-            replace_nan_values(ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir, i)
+            replace_nan_values(forest_cover, ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir, i)
+
+        return forest_cover
 
 
 def extract_and_move_file(download_folder, protected_area_dir, bands_folder_name, ndvi_folder_name):

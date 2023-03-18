@@ -111,7 +111,7 @@ def forest_ndvi(band4_path, band5_path, shapes, threshold, output_path):
     return clipped_file, total_area
 
 
-def replace_nan_values(before_band_path, current_band_path, output_path, index):
+def replace_nan_values(forest_cover, before_band_path, current_band_path, output_path, index):
     # Split the file path into components using the forward slash as the separator
     before_band_path_components = before_band_path.split("/")
     current_band_path_components = current_band_path.split("/")
@@ -119,6 +119,7 @@ def replace_nan_values(before_band_path, current_band_path, output_path, index):
     # Get the date component from the path (assumes the date component is the third-last element in the path)
     date_before_band_path_components = before_band_path_components[6]
     date_current_band_path_components = current_band_path_components[5]
+    forest_cover.detection_date_list.append(date_current_band_path_components)
 
     if index == 1:
         date_before_band_path_components = date_before_band_path_components.replace('__.TIF', '')
@@ -154,6 +155,7 @@ def replace_nan_values(before_band_path, current_band_path, output_path, index):
             pixel_size = metadata['transform'][0]
             area = (ndvi_values2 > 0.6).sum() * (pixel_size ** 2) / 10000
             print(f'Total area of NDVI: {area:.2f} hectares')
+            forest_cover.total_extension_forest_cover_list.append(area)
 
 
 def forest_not_forest(ndvi_file, shapes, threshold, output_path):

@@ -1,4 +1,5 @@
 # Standard library imports
+from datetime import date
 import json
 import os
 
@@ -107,6 +108,13 @@ def save_geojson_to_folder(geojson_str, folder_path, filename):
 
     return file_path
 
+
+def custom_encoder(obj):
+    if isinstance(obj, date):
+        return obj.strftime('%Y-%m-%d')
+    else:
+        return None
+
 # site's coord (EPSG:4326)
 protected_area_name = replace_spaces_with_underscore(config('PROTECTED_AREA'))
 geojson_path = config('GEOJSON_PATH')  # https://geojson.io/
@@ -133,7 +141,6 @@ bands_folder = config('BANDS_FOLDER')
 ndvi_folder = config('NDVI_FOLDER')
 deforestation_folder = config('DEFORESTATION_FOLDER')
 
-
 protected_area_dir = create_folder(protected_area_name, landsat_dir)
 protected_area_deforestation_dir = create_folder(deforestation_folder, protected_area_dir)
 protected_area_shape_dir, protected_area_total_extension = create_shapefile(geojson_path, protected_area_name,
@@ -143,8 +150,34 @@ footprint = get_footprint(geojson_path)
 
 api = LandsatAPI(username, password, chromedriver_path, downloads_dir, protected_area_dir,
                  protected_area_deforestation_dir)
-#api.query(chromedriver_path, downloads_dir, footprint, 120)
-api.processing(protected_area_name, protected_area_total_extension, protected_area_dir,
-               footprint, protected_area_shape_dir, bands_folder, ndvi_folder, deforestation_folder)
+# api.query(chromedriver_path, downloads_dir, footprint, 120)
+forest_cover = api.processing(protected_area_name, protected_area_total_extension, protected_area_dir,
+                              footprint, protected_area_shape_dir, bands_folder, ndvi_folder, deforestation_folder)
+
+forest_cover.protected_area_name = config('PROTECTED_AREA')
+forest_cover.photo = 'photo'
+forest_cover.description = 'description'
+forest_cover.footprint = footprint
+
+# Custom encoder function for date objects
+
+# Create a dictionary with the attributes and their values
+forest_cover_dict = {
+    "protected_area_name": forest_cover.protected_area_name,
+    "photo": forest_cover.photo,
+    "description": forest_cover.description,
+    "footprint": forest_cover.footprint,
+    "last_detection_date": forest_cover.last_detection_date,
+    "total_extension_protected_area": forest_cover.total_extension_protected_area,
+    "detection_date_list": forest_cover.detection_date_list,
+    "total_extension_forest_cover_list": forest_cover.total_extension_forest_cover_list
+}
+
+# Convert dictionary to a JSON string using the custom encoder
+forest_cover_json = json.dumps(forest_cover_dict, default=custom_encoder)
+
+# Print the JSON string
+print(forest_cover_json)
+
 
 
