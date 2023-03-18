@@ -376,15 +376,19 @@ def extract_and_move_file(download_folder, protected_area_dir, bands_folder_name
         os.makedirs(new_folder, exist_ok=True)
         move_dir = os.path.join(download_folder, dir_name)
         shutil.move(move_dir, new_folder)
-        on_newfolder = os.path.join(new_folder, dir_name)
+        on_new_folder = os.path.join(new_folder, dir_name)
         print(new_folder)
-        os.rename(on_newfolder, os.path.join(new_folder, bands_folder_name))
+
+        try:
+            os.rename(on_new_folder, os.path.join(new_folder, bands_folder_name))
+
+        except:
+            send2trash(on_new_folder)
+            continue
 
         # Create NDVI directory
         ndvi_folder_path = os.path.join(new_folder, ndvi_folder_name)
         os.makedirs(ndvi_folder_path, exist_ok=True)
-
-    print("Satellite images are ready")
 
 
 def get_date_range_for_download(landsat_folder):
