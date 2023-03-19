@@ -8,6 +8,7 @@ import fiona
 import folium
 import numpy as np
 import rasterio
+from rasterio import features
 import rasterio.mask
 import pyproj
 from pyproj import Proj
@@ -226,8 +227,5 @@ def generate_ndvi(tif_list, protected_area_date, folder_name, shapes):
     #forest_not_forest(ndvi_file, shapes, 0.7, ndvi_file)
 
     return clipped_file, total_area
-
-
-
 
 

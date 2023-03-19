@@ -5,6 +5,7 @@ from math import cos
 
 # Third-party library imports
 import rasterio
+from rasterio.merge import merge
 import unpackqa
 import rioxarray as rxr
 import xarray as xr
@@ -149,23 +150,27 @@ def apply_cloud_mask(qa_path, product='LANDSAT_8_C2_L2_QAPixel', flags=['Cloud',
 
     return cloud_mask
 
-def combine_tifs(tif_list):
-    """A function that combines a list of tifs in the same CRS
-    and of the same extent into an xarray object
-    Parameters
-    ----------
-    tif_list : list
-        A list of paths to the tif files that you wish to combine.
-
-    Returns
-    -------
-    An xarray object with all of the tif files in the listmerged into
-    a single object.
+def combine_tifs(tif_list, output_path):
     """
+    Combines multiple TIFF images into a single multiband TIFF file.
 
-    out_xr = []
-    for i, tif_path in enumerate(tif_list):
-        out_xr.append(rxr.open_rasterio(tif_path, masked=True).squeeze())
-        out_xr[i]["band"] = i + 1
+    Args:
+    tiff_list (list of str): List of filenames for TIFF images to be combined.
+    output_filename (str): Filename for the output multiband TIFF file.
+    """
+    # Open all TIFF images and read their metadata
+    tiffs = []
+    for tiff_filename in tif_list:
+        tiff = rasterio.open(tiff_filename)
+        tiffs.append(tiff)
+    metadata = tiffs[0].meta.copy()
 
-    return xr.concat(out_xr, dim="band")
+    # Update the metadata for the output multiband TIFF
+    metadata.update(count=len(tif_list), dtype=rasterio.float32)
+
+    # Merge all TIFF images into the output multiband TIFF
+    merged, _ = merge(tiffs)
+
+    # Write the output multiband TIFF to disk
+    with rasterio.open(output_path, 'w', **metadata) as out:
+        out.write(merged)

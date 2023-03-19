@@ -150,7 +150,7 @@ footprint = get_footprint(geojson_path)
 
 api = LandsatAPI(username, password, chromedriver_path, downloads_dir, protected_area_dir,
                  protected_area_deforestation_dir)
-# api.query(chromedriver_path, downloads_dir, footprint, 120)
+# api.query(chromedriver_path, downloads_dir, footprint, 150)
 forest_cover = api.processing(protected_area_name, protected_area_total_extension, protected_area_dir,
                               footprint, protected_area_shape_dir, bands_folder, ndvi_folder, deforestation_folder)
 

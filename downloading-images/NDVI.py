@@ -10,6 +10,8 @@ from rasterio.mask import mask
 import gdal
 
 # Project-specific library imports
+from AtmosphericCorrection import *
+
 
 
 def ndvi(band4_path, band5_path, shapes, output_path):
@@ -111,6 +113,41 @@ def forest_ndvi(band4_path, band5_path, shapes, threshold, output_path):
     return clipped_file, total_area
 
 
+def replace_nan_value_rgb(ndvi_path, band_list_path):
+
+    tif_merged_path = os.path.join(os.path.dirname(band_list_path[0]),
+                            "LC09_L2SP_009056_20221021_20221024_02_T1_combined_images.TIF")
+
+    tif_masked_list = []
+
+    for i, tif_path in enumerate(band_list_path):
+
+        # Open both input bands using rasterio
+        with rasterio.open(ndvi_path) as src1, rasterio.open(tif_path) as src2:
+            # Read the NDVI arrays for both bands
+            ndvi_value = src1.read(1)
+            tif_value = src2.read(1)
+
+            # Create a new raster file with the same shape and metadata as the second input band
+            metadata = src2.meta.copy()
+
+            # Replace values in the second image's array with corresponding values in the first image
+            # if the values of the first image are NaN
+            nan_mask = np.isnan(ndvi_value)
+            tif_value[nan_mask] = ndvi_value[nan_mask]
+
+            if i != band_list_path[-1]:
+
+                # Create a new raster file with the same shape and metadata as the second input band
+                output_path = os.path.splitext(tif_path)[0] + '_NDVI_masked.TIF'
+                tif_masked_list.append(output_path)
+                with rasterio.open(output_path, 'w', **metadata) as dst:
+                    dst.write(tif_value, 1)
+
+
+    #tif_masked_list.append(ndvi_path)
+    combine_tifs(tif_masked_list, tif_merged_path)
+
 def replace_nan_values(forest_cover, before_band_path, current_band_path, output_path, index):
     # Split the file path into components using the forward slash as the separator
     before_band_path_components = before_band_path.split("/")
@@ -149,7 +186,7 @@ def replace_nan_values(forest_cover, before_band_path, current_band_path, output
         # Create a new raster file with the same shape and metadata as the second input band
         metadata = src2.meta.copy()
         with rasterio.open(new_output_path, 'w', **metadata) as dst:
-            dst.write(ndvi_values2, 1)
+            dst.write(ndvi_values2)
 
             # Calculate the area of pixels greater than 0 in hectares
             pixel_size = metadata['transform'][0]
