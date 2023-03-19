@@ -113,99 +113,6 @@ def forest_ndvi(band4_path, band5_path, shapes, threshold, output_path):
     return clipped_file, total_area
 
 
-def replace_nan_value_rgb(ndvi_path, band_list_path):
-
-    for tif_path in band_list_path:
-
-        # Open both input bands using rasterio
-        with rasterio.open(ndvi_path) as src1, rasterio.open(tif_path) as src2:
-            # Read the NDVI arrays for both bands
-            ndvi_value = src1.read(1)
-            tif_value = src2.read(1)
-
-            # Create a new raster file with the same shape and metadata as the second input band
-            metadata = src2.meta.copy()
-
-            # Replace values in the second image's array with corresponding values in the first image
-            # if the values of the first image are NaN
-            nan_mask = np.isnan(ndvi_value)
-            tif_value[nan_mask] = ndvi_value[nan_mask]
-
-            # Create a new raster file with the same shape and metadata as the second input band
-            output_path = os.path.splitext(tif_path)[0] + '_NDVI_masked.TIF'
-            with rasterio.open(output_path, 'w', **metadata) as dst:
-                dst.write(tif_value, 1)
-
-
-def replace_nan_value_multiband(ndvi_path, multi_band_tif_path):
-    with rasterio.open(ndvi_path) as src1, rasterio.open(multi_band_tif_path) as src2:
-        # Read the NDVI array for the first band
-        ndvi_value = src1.read(1)
-
-        # Read the 4-band array for the second file
-        tif_value = src2.read()
-
-        # Create a new raster file with the same shape and metadata as the second input band
-        metadata = src2.meta.copy()
-
-        # Replace values in the second image's array with corresponding values in the first image
-        # if the values of the first image are NaN
-        nan_mask = np.isnan(ndvi_value)
-        for i in range(4):
-            tif_value[i][nan_mask] = ndvi_value[nan_mask]
-
-        # Create a new raster file with the same shape and metadata as the second input band
-        output_path = os.path.splitext(multi_band_tif_path)[0] + '_NDVI_masked.TIF'
-        with rasterio.open(output_path, 'w', **metadata) as dst:
-            dst.write(tif_value)
-
-def replace_nan_values(forest_cover, before_band_path, current_band_path, output_path, index):
-    # Split the file path into components using the forward slash as the separator
-    before_band_path_components = before_band_path.split("/")
-    current_band_path_components = current_band_path.split("/")
-
-    # Get the date component from the path (assumes the date component is the third-last element in the path)
-    date_before_band_path_components = before_band_path_components[6]
-    date_current_band_path_components = current_band_path_components[5]
-    forest_cover.detection_date_list.append(date_current_band_path_components)
-
-    if index == 1:
-        date_before_band_path_components = date_before_band_path_components.replace('__.TIF', '')
-
-    elif index >= 2:
-        splited_before_band_path_components = date_before_band_path_components.split('__')
-        new_date_before_band_path_components = splited_before_band_path_components[1]
-        date_before_band_path_components = new_date_before_band_path_components.replace('.TIF', '')
-
-    name = date_before_band_path_components + '__' + date_current_band_path_components
-    new_output_path = os.path.join(output_path, name + '.TIF')
-
-    # Open both input bands using rasterio
-    with rasterio.open(before_band_path) as src1, rasterio.open(current_band_path) as src2:
-        # Read the NDVI arrays for both bands
-        ndvi_values1 = src1.read(1)
-        ndvi_values2 = src2.read(1)
-
-        # Create a new raster file with the same shape and metadata as the second input band
-        metadata = src2.meta.copy()
-
-
-        # Replace NaN values in the second image's NDVI array with corresponding values in the first image
-        # if the values of the first image are not NaN
-        ndvi_values2 = np.where(np.isnan(ndvi_values2) & (~np.isnan(ndvi_values1)), ndvi_values1, ndvi_values2)
-
-        # Create a new raster file with the same shape and metadata as the second input band
-        metadata = src2.meta.copy()
-        with rasterio.open(new_output_path, 'w', **metadata) as dst:
-            dst.write(ndvi_values2)
-
-            # Calculate the area of pixels greater than 0 in hectares
-            pixel_size = metadata['transform'][0]
-            area = (ndvi_values2 > 0.6).sum() * (pixel_size ** 2) / 10000
-            print(f'Total area of NDVI: {area:.2f} hectares')
-            forest_cover.total_extension_forest_cover_list.append(area)
-
-
 def forest_not_forest(ndvi_file, shapes, threshold, output_path):
     """Classify forest and non-forest areas based on NDVI values and clip the output to the provided shapefile.
 
@@ -258,3 +165,148 @@ def forest_not_forest(ndvi_file, shapes, threshold, output_path):
         # Calculate the total area of the non-NaN pixels in hectares
         total_area = num_non_nan_pixels * pixel_size / 10000
         print(f"Total area of forest/non-forest: {total_area} hectares")
+
+
+def replace_nan_value_rgb(ndvi_path, band_list_path):
+
+    for tif_path in band_list_path:
+
+        # Open both input bands using rasterio
+        with rasterio.open(ndvi_path) as src1, rasterio.open(tif_path) as src2:
+            # Read the NDVI arrays for both bands
+            ndvi_value = src1.read(1)
+            tif_value = src2.read(1)
+
+            # Create a new raster file with the same shape and metadata as the second input band
+            metadata = src2.meta.copy()
+
+            # Replace values in the second image's array with corresponding values in the first image
+            # if the values of the first image are NaN
+            nan_mask = np.isnan(ndvi_value)
+            tif_value[nan_mask] = ndvi_value[nan_mask]
+
+            # Create a new raster file with the same shape and metadata as the second input band
+            output_path = os.path.splitext(tif_path)[0] + '_NDVI_masked.TIF'
+            with rasterio.open(output_path, 'w', **metadata) as dst:
+                dst.write(tif_value, 1)
+
+
+def replace_nan_value_multiband(ndvi_path, multi_band_tif_path):
+    with rasterio.open(ndvi_path) as src1, rasterio.open(multi_band_tif_path) as src2:
+        # Read the NDVI array for the first band
+        ndvi_value = src1.read(1)
+
+        # Read the 4-band array for the second file
+        tif_value = src2.read()
+
+        # Create a new raster file with the same shape and metadata as the second input band
+        metadata = src2.meta.copy()
+
+        # Replace values in the second image's array with corresponding values in the first image
+        # if the values of the first image are NaN
+        nan_mask = np.isnan(ndvi_value)
+        for i in range(4):
+            tif_value[i][nan_mask] = ndvi_value[nan_mask]
+
+        # Create a new raster file with the same shape and metadata as the second input band
+        output_path = os.path.splitext(multi_band_tif_path)[0] + '_NDVI_masked.TIF'
+        with rasterio.open(output_path, 'w', **metadata) as dst:
+            dst.write(tif_value)
+
+    return output_path
+
+
+def replace_nan_values(forest_cover, before_band_path, current_band_path, output_path, index):
+    # Split the file path into components using the forward slash as the separator
+    before_band_path_components = before_band_path.split("/")
+    current_band_path_components = current_band_path.split("/")
+
+    # Get the date component from the path (assumes the date component is the third-last element in the path)
+    date_before_band_path_components = before_band_path_components[6]
+    date_current_band_path_components = current_band_path_components[5]
+    forest_cover.detection_date_list.append(date_current_band_path_components)
+
+    if index == 1:
+        date_before_band_path_components = date_before_band_path_components.replace('__.TIF', '')
+
+    elif index >= 2:
+        splited_before_band_path_components = date_before_band_path_components.split('__')
+        new_date_before_band_path_components = splited_before_band_path_components[1]
+        date_before_band_path_components = new_date_before_band_path_components.replace('.TIF', '')
+
+    name = date_before_band_path_components + '__' + date_current_band_path_components
+    new_output_path = os.path.join(output_path, name + '.TIF')
+
+    # Open both input bands using rasterio
+    with rasterio.open(before_band_path) as src1, rasterio.open(current_band_path) as src2:
+        # Read the NDVI arrays for both bands
+        ndvi_values1 = src1.read(1)
+        ndvi_values2 = src2.read(1)
+
+        # Create a new raster file with the same shape and metadata as the second input band
+        metadata = src2.meta.copy()
+
+
+        # Replace NaN values in the second image's NDVI array with corresponding values in the first image
+        # if the values of the first image are not NaN
+        ndvi_values2 = np.where(np.isnan(ndvi_values2) & (~np.isnan(ndvi_values1)), ndvi_values1, ndvi_values2)
+
+        # Create a new raster file with the same shape and metadata as the second input band
+        metadata = src2.meta.copy()
+        with rasterio.open(new_output_path, 'w', **metadata) as dst:
+            dst.write(ndvi_values2, 1)
+
+            # Calculate the area of pixels greater than 0 in hectares
+            pixel_size = metadata['transform'][0]
+            area = (ndvi_values2 > 0.6).sum() * (pixel_size ** 2) / 10000
+            print(f'Total area of NDVI: {area:.2f} hectares')
+            forest_cover.total_extension_forest_cover_list.append(area)
+
+        return new_output_path
+
+def replace_nan_add_ndvi(before_multi_band_path, current_multi_band_path, ndvi_path, index):
+    # Open all input bands using rasterio
+    with rasterio.open(before_multi_band_path) as src1, rasterio.open(current_multi_band_path) as src2, rasterio.open(ndvi_path) as src3:
+        # Read the arrays for all bands
+        values1 = src1.read()
+        values2 = src2.read()
+        ndvi_values = src3.read(1)
+
+        # Create a new raster file with the same shape and metadata as the second input band
+        metadata = src2.meta.copy()
+        metadata.update(count=5, dtype=values2.dtype)
+
+        # Replace NaN values in the second image array with corresponding values in the first image
+        # if the values of the first image are not NaN
+        for i in range(len(values1)):
+            if index >= 2 and i == 4:
+                continue
+            values2[i] = np.where(np.isnan(values2[i]) & (~np.isnan(values1[i])), values1[i], values2[i])
+
+        # Add the NDVI values to the fifth band of the new raster
+        values2 = np.concatenate((values2, np.expand_dims(ndvi_values, axis=0)), axis=0)
+
+        # Write the new 5-band raster to disk
+        output_path = os.path.splitext(current_multi_band_path)[0] + '_added.TIF'
+        with rasterio.open(output_path, 'w', **metadata) as dst:
+            dst.write(values2)
+
+def add_ndvi_in_multi_band(multi_band_path, ndvi_path):
+
+    # Open all input bands using rasterio
+    with rasterio.open(multi_band_path) as src1, rasterio.open(ndvi_path) as src2:
+        # Read the arrays for all bands
+        values = src1.read()
+        ndvi_values = src2.read(1)
+
+        # Create a new raster file with the same shape and metadata as the second input band
+        metadata = src2.meta.copy()
+        metadata.update(count=5, dtype=values.dtype)
+
+        # Add the NDVI values to the fifth band of the new raster
+        values = np.concatenate((values, np.expand_dims(ndvi_values, axis=0)), axis=0)
+
+        # Write the new 5-band raster to disk
+        output_path = os.path.splitext(multi_band_path)[0] + '_added.TIF'
+        with rasterio.open(output_path, 'w', **metadata) as dst:
+            dst.write(values)

@@ -12,6 +12,7 @@ import xarray as xr
 # External library imports
 
 # Project-specific library imports
+from osgeo import gdal
 
 
 def radiometric_rescaling_coefficients(path_landsat8_metadata, band):
@@ -149,9 +150,6 @@ def apply_cloud_mask(qa_path, product='LANDSAT_8_C2_L2_QAPixel', flags=['Cloud',
 
     return cloud_mask
 
-
-import os
-from osgeo import gdal
 
 def create_multiband_color_tiff(tif_list, output_path):
     # Load the first TIFF file to get the dimensions and metadata

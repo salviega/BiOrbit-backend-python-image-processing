@@ -308,7 +308,7 @@ class LandsatAPI:
         forest_cover.detection_date_list = []
         forest_cover.total_extension_forest_cover_list = []
 
-        # extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
+        extract_and_move_file(self.download_folder, self.protected_area_dir, 'bands_folder', 'ndvi_folder')
 
         # Open shapes file
 
@@ -318,7 +318,7 @@ class LandsatAPI:
 
         protected_area_dates = get_sorted_tif_list(self.protected_area_dir, deforestation_folder)
 
-        '''for protected_area_date in protected_area_dates:
+        for protected_area_date in protected_area_dates:
 
             # clip to panel
             tif_list = get_filelist(protected_area_date, bands_folder, "*.TIF")
@@ -342,7 +342,7 @@ class LandsatAPI:
             tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
             protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_date,
                                                                                          ndvi_folder + '_folder',
-                                                                                         protected_area_shape)'''
+                                                                                         protected_area_shape)
 
         filename_1 = 'ndvi_folder/forest_NDVI_mask_clipped.TIF'
         filename_2 = 'forest_NDVI_mask_clipped.TIF'
@@ -351,12 +351,11 @@ class LandsatAPI:
 
             if i == 0:
 
-                tif_list = get_filelist(protected_area_date, bands_folder, "*.TIF")
                 ndvi_date = os.path.join(protected_area_date, filename_1)
                 multi_band_tiff = glob.glob(protected_area_date + '/*.TIF')
                 multi_band_tiff = multi_band_tiff[0]
 
-                replace_nan_value_multiband(ndvi_date, multi_band_tiff)
+                multi_band_masked_tiff_path = replace_nan_value_multiband(ndvi_date, multi_band_tiff)
 
                 with rasterio.open(ndvi_date) as src:
                     band_forest = src.read(1)
@@ -375,17 +374,35 @@ class LandsatAPI:
                 output_file = os.path.join(self.protected_area_deforestation_dir, split_name[-1] + '__.TIF')
                 forest_cover.detection_date_list.append(split_name[-1])
 
+                add_ndvi_in_multi_band(multi_band_masked_tiff_path, ndvi_date)
+
                 shutil.copy(ndvi_date, output_file)
                 continue
 
-            if i < 1:
-                deforestation_tiff_list = sorted(glob.glob(os.path.join(self.protected_area_deforestation_dir, '*.TIF')))
 
-                ndvi_before_date = os.path.join(deforestation_tiff_list[i-1])
-                ndvi_current_date_dir = get_folder(protected_area_dates[i], ndvi_folder)
-                ndvi_current_date = os.path.join(ndvi_current_date_dir, filename_2)
+            ndvi_date = os.path.join(protected_area_date, filename_1)
+            multi_band_tiff = glob.glob(protected_area_date + '/*.TIF')
+            multi_band_tiff = multi_band_tiff[0]
 
-                replace_nan_values(forest_cover, ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir, i)
+            current_multi_band_masked_tiff_path = replace_nan_value_multiband(ndvi_date, multi_band_tiff)
+
+            deforestation_tiff_list = sorted(glob.glob(os.path.join(self.protected_area_deforestation_dir, '*.TIF')))
+
+            if i == 1:
+
+                before_multi_band_masked_data = glob.glob(protected_area_dates[i-1] + '/*_masked.TIF')
+                before_multi_band_masked_data = before_multi_band_masked_data[0]
+
+            else:
+                before_multi_band_masked_data = glob.glob(protected_area_dates[i - 1] + '/*_added.TIF')
+                before_multi_band_masked_data = before_multi_band_masked_data[0]
+
+            ndvi_before_date = os.path.join(deforestation_tiff_list[i-1])
+            ndvi_current_date_dir = get_folder(protected_area_dates[i], ndvi_folder)
+            ndvi_current_date = os.path.join(ndvi_current_date_dir, filename_2)
+
+            protected_area_deforestation_path = replace_nan_values(forest_cover, ndvi_before_date, ndvi_current_date, self.protected_area_deforestation_dir, i)
+            replace_nan_add_ndvi(before_multi_band_masked_data, current_multi_band_masked_tiff_path, protected_area_deforestation_path, i)
 
         return forest_cover
 
