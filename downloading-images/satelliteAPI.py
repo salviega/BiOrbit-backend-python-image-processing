@@ -328,6 +328,11 @@ class LandsatAPI:
             tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
             affine_tif(tif_list)
 
+            tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
+            name = os.path.basename(protected_area_date) + '_B2_B3_B4_B5_multiband.TIF'
+            output_path = os.path.join(protected_area_date, name)
+            create_multiband_color_tiff(tif_list, output_path)
+
             # convert DN to Radiance
             tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
             metadata_list = get_filelist(protected_area_date, bands_folder, '*MTL.txt')
@@ -337,8 +342,8 @@ class LandsatAPI:
             tif_list = get_filelist(protected_area_date, bands_folder, '*.TIF')
             protected_area_ndvi_dir, protected_area_ndvi_total_extension = generate_ndvi(tif_list, protected_area_date,
                                                                                          ndvi_folder + '_folder',
-                                                                                         protected_area_shape)
-       '''
+                                                                                         protected_area_shape)'''
+
         filename_1 = 'ndvi_folder/forest_NDVI_mask_clipped.TIF'
         filename_2 = 'forest_NDVI_mask_clipped.TIF'
 
@@ -348,8 +353,10 @@ class LandsatAPI:
 
                 tif_list = get_filelist(protected_area_date, bands_folder, "*.TIF")
                 ndvi_date = os.path.join(protected_area_date, filename_1)
+                multi_band_tiff = glob.glob(protected_area_date + '/*.TIF')
+                multi_band_tiff = multi_band_tiff[0]
 
-                replace_nan_value_rgb(ndvi_date, tif_list)
+                replace_nan_value_multiband(ndvi_date, multi_band_tiff)
 
                 with rasterio.open(ndvi_date) as src:
                     band_forest = src.read(1)

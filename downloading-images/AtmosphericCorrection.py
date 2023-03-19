@@ -5,7 +5,6 @@ from math import cos
 
 # Third-party library imports
 import rasterio
-from rasterio.merge import merge
 import unpackqa
 import rioxarray as rxr
 import xarray as xr
@@ -150,27 +149,25 @@ def apply_cloud_mask(qa_path, product='LANDSAT_8_C2_L2_QAPixel', flags=['Cloud',
 
     return cloud_mask
 
-def combine_tifs(tif_list, output_path):
-    """
-    Combines multiple TIFF images into a single multiband TIFF file.
 
-    Args:
-    tiff_list (list of str): List of filenames for TIFF images to be combined.
-    output_filename (str): Filename for the output multiband TIFF file.
-    """
-    # Open all TIFF images and read their metadata
-    tiffs = []
-    for tiff_filename in tif_list:
-        tiff = rasterio.open(tiff_filename)
-        tiffs.append(tiff)
-    metadata = tiffs[0].meta.copy()
+import os
+from osgeo import gdal
 
-    # Update the metadata for the output multiband TIFF
-    metadata.update(count=len(tif_list), dtype=rasterio.float32)
-
-    # Merge all TIFF images into the output multiband TIFF
-    merged, _ = merge(tiffs)
-
-    # Write the output multiband TIFF to disk
-    with rasterio.open(output_path, 'w', **metadata) as out:
-        out.write(merged)
+def create_multiband_color_tiff(tif_list, output_path):
+    # Load the first TIFF file to get the dimensions and metadata
+    first_tif = gdal.Open(tif_list[0])
+    data_type = first_tif.GetRasterBand(1).DataType
+    driver = gdal.GetDriverByName('GTiff')
+    # Create the output TIFF file
+    out_tif = driver.Create(output_path, first_tif.RasterXSize, first_tif.RasterYSize, len(tif_list), data_type)
+    out_tif.SetGeoTransform(first_tif.GetGeoTransform())
+    out_tif.SetProjection(first_tif.GetProjection())
+    # Loop through the input TIFF files and write each band to the output TIFF
+    for i, tif_file in enumerate(tif_list):
+        tif = gdal.Open(tif_file)
+        band_data = tif.GetRasterBand(1).ReadAsArray()
+        band = out_tif.GetRasterBand(i+1)
+        band.WriteArray(band_data)
+        tif = None
+        band.FlushCache()
+    out_tif = None
