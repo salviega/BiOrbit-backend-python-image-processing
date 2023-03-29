@@ -6,8 +6,12 @@ import os
 # Third-party library imports
 from decouple import config
 import geopandas as gpd
+from flask import Flask, jsonify, request
 import folium
-from pyproj import CRS
+import shapefile
+from pyproj import Proj, transform
+from shapely.geometry import Polygon
+from pyproj import Transformer
 
 # External library imports
 
@@ -39,21 +43,36 @@ def create_folder(name, output_path):
         return os.path.join(output_path, name)
 
 
-def create_shapefile(file, protected_area_name, output_path):
-    # Load the GeoJSON file using GeoPandas
-    gdf = gpd.read_file(file)
+def create_shapefile(coordinates, protected_area_name, output_path):
 
-    # Reproject the GeoDataFrame to EPSG:32618
-    gdf = gdf.to_crs(CRS('EPSG:32618'))
+    # Flatten the nested list to match the expected format
+    coordinates = [tuple(coord) for coord in coordinates[0]]
+
+    # Define the input and output CRS (Coordinate Reference Systems)
+    in_crs = 'EPSG:4326'
+    out_crs = 'EPSG:32618'
+
+    # Create a Transformer object to convert coordinates between CRS
+    transformer = Transformer.from_crs(in_crs, out_crs)
+
+    # Transform the coordinates from input CRS to output CRS
+    coords = [transformer.transform(lon, lat) for lon, lat in coordinates]
+
+    # Create a Shapely Polygon object from the transformed coordinates
+    poly = Polygon(coords)
 
     # Calculate the area in hectares
-    area = gdf.geometry.area.sum() / 10000
+    area = poly.area / 10000
     print(f"Total area of shape: {area} hectares")
 
-    # Save the GeoDataFrame to a shapefile
+    # Create a GeoDataFrame with the polygon geometry
+    gdf = gpd.GeoDataFrame({'name': [protected_area_name], 'geometry': [poly]}, crs=out_crs)
+
+    # Save the GeoDataFrame as a shapefile
     new_output_path = os.path.join(output_path, protected_area_name + '.shp')
     gdf.to_file(new_output_path)
 
+    print("Shapefile created successfully!")
     return new_output_path, area
 
 
@@ -115,69 +134,100 @@ def custom_encoder(obj):
     else:
         return None
 
-# site's coord (EPSG:4326)
-protected_area_name = replace_spaces_with_underscore(config('PROTECTED_AREA'))
-geojson_path = config('GEOJSON_PATH')  # https://geojson.io/
 
-# USGS website
-username = config('USERNAME')
-password = config('PASSWORD')
-
-# chromedriver path
-chromedriver_path = config('CHROMEDRIVER_PATH')
-
-# download directory
-downloads_dir = config('DOWNLOADS_DIR')
-
-# landsat directory
-landsat_dir = config('LANDSAT_DIR')
-
-# Open shapes file
-pnnsfl_panel_path = config('PROTECTED_AREA_PANEL_PATH')
-pnnsfl_shape_path = config('PROTECTED_AREA_SHAPE_PATH')
-
-# folders name
-bands_folder = config('BANDS_FOLDER')
-ndvi_folder = config('NDVI_FOLDER')
-deforestation_folder = config('DEFORESTATION_FOLDER')
-
-protected_area_dir = create_folder(protected_area_name, landsat_dir)
-protected_area_deforestation_dir = create_folder(deforestation_folder, protected_area_dir)
-protected_area_shape_dir, protected_area_total_extension = create_shapefile(geojson_path, protected_area_name,
-                                                                            protected_area_dir)
-# geojson_path = save_geojson_to_folder(geojson_path, protected_area_dir, protected_area_name)
-footprint = get_footprint(geojson_path)
-
-api = LandsatAPI(username, password, chromedriver_path, downloads_dir, protected_area_dir,
-                 protected_area_deforestation_dir)
-# api.query(chromedriver_path, downloads_dir, footprint, 150)
-forest_cover = api.processing(protected_area_name, protected_area_total_extension, protected_area_dir,
-                              footprint, protected_area_shape_dir, bands_folder, ndvi_folder, deforestation_folder)
-
-forest_cover.protected_area_name = config('PROTECTED_AREA')
-forest_cover.photo = 'photo'
-forest_cover.description = 'description'
-forest_cover.footprint = footprint
-
-# Custom encoder function for date objects
-
-# Create a dictionary with the attributes and their values
-forest_cover_dict = {
-    "protected_area_name": forest_cover.protected_area_name,
-    "photo": forest_cover.photo,
-    "description": forest_cover.description,
-    "footprint": forest_cover.footprint,
-    "last_detection_date": forest_cover.last_detection_date,
-    "total_extension_protected_area": forest_cover.total_extension_protected_area,
-    "detection_date_list": forest_cover.detection_date_list,
-    "total_extension_forest_cover_list": forest_cover.total_extension_forest_cover_list
-}
-
-# Convert dictionary to a JSON string using the custom encoder
-forest_cover_json = json.dumps(forest_cover_dict, default=custom_encoder)
-
-# Print the JSON string
-print(forest_cover_json)
+app = Flask(__name__)
 
 
+@app.route('/processing', methods=['POST'])
+def handle_post_request():
+    # retrieve data from the request body
+    data = request.get_json()
 
+    # process the data
+    result = process_data(data)
+
+    print(data)
+    protected_area_id = data['data']['idInteger']
+    protected_area_name = data['data']['name']
+    protected_area_photo = data['data']['photo']
+    protected_area_description = data['data']['description']
+    protected_area_geojson = data['data']['geoJson']
+    footprint = json.loads(protected_area_geojson)
+    protected_area_country = data['data']['country']
+
+
+    # site's coord (EPSG:4326)
+    geojson_path = config('GEOJSON_PATH')  # https://geojson.io/
+
+    # USGS website
+    username = config('USERNAME')
+    password = config('PASSWORD')
+
+    # chromedriver path
+    chromedriver_path = config('CHROMEDRIVER_PATH')
+
+    # download directory
+    downloads_dir = config('DOWNLOADS_DIR')
+
+    # landsat directory
+    landsat_dir = config('LANDSAT_DIR')
+
+    # Open shapes file
+    pnnsfl_panel_path = config('PROTECTED_AREA_PANEL_PATH')
+    pnnsfl_shape_path = config('PROTECTED_AREA_SHAPE_PATH')
+
+    # folders name
+    bands_folder = config('BANDS_FOLDER')
+    ndvi_folder = config('NDVI_FOLDER')
+    deforestation_folder = config('DEFORESTATION_FOLDER')
+
+    protected_area_dir = create_folder(protected_area_name, landsat_dir)
+    protected_area_deforestation_dir = create_folder(deforestation_folder, protected_area_dir)
+    protected_area_shape_dir, protected_area_total_extension = create_shapefile(footprint, protected_area_name,
+                                                                                protected_area_dir)
+
+    # geojson_path = save_geojson_to_folder(geojson_path, protected_area_dir, protected_area_name)
+    #footprint = get_footprint(geojson_path)
+
+    api = LandsatAPI(username, password, chromedriver_path, downloads_dir, protected_area_dir,
+                     protected_area_deforestation_dir)
+    api.query(chromedriver_path, downloads_dir, footprint, 10)
+    '''forest_cover = api.processing(protected_area_name, protected_area_total_extension, protected_area_dir,
+                                  footprint, protected_area_shape_dir, bands_folder, ndvi_folder, deforestation_folder)
+
+    forest_cover.protected_area_name = config('PROTECTED_AREA')
+    forest_cover.photo = 'photo'
+    forest_cover.description = 'description'
+    forest_cover.footprint = footprint
+
+    # Custom encoder function for date objects
+
+    # Create a dictionary with the attributes and their values
+    forest_cover_dict = {
+        "protected_area_name": forest_cover.protected_area_name,
+        "photo": forest_cover.photo,
+        "description": forest_cover.description,
+        "footprint": forest_cover.footprint,
+        "last_detection_date": forest_cover.last_detection_date,
+        "total_extension_protected_area": forest_cover.total_extension_protected_area,
+        "detection_date_list": forest_cover.detection_date_list,
+        "total_extension_forest_cover_list": forest_cover.total_extension_forest_cover_list
+    }
+
+    # Convert dictionary to a JSON string using the custom encoder
+    forest_cover_json = json.dumps(forest_cover_dict, default=custom_encoder)
+
+    # Print the JSON string
+    print(forest_cover_json)'''
+
+    # return the result as JSON
+    return jsonify(result)
+
+
+def process_data(data):
+    # implement your processing logic here
+    return {'message': 'Data processed successfully.'}
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

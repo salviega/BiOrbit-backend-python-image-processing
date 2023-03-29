@@ -81,7 +81,7 @@ exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongrou
 fasteners @ file:///home/conda/feedstock_root/build_artifacts/fasteners_1643971550063/work
 fastjsonschema @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_b5c1gee32t/croots/recipe/python-fastjsonschema_1661368622875/work
 filelock @ file:///opt/conda/conda-bld/filelock_1647002191454/work
-Fiona==1.8.22
+Fiona~=1.8.20
 flake8 @ file:///opt/conda/conda-bld/flake8_1648129545443/work
 Flask @ file:///home/ktietz/src/ci/flask_1611932660458/work
 folium @ file:///home/conda/feedstock_root/build_artifacts/folium_1670956290671/work
@@ -342,3 +342,18 @@ yapf @ file:///tmp/build/80754af9/yapf_1615749224965/work
 zict==2.1.0
 zipp @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_b279673d-f037-44c7-8773-c5a6b6f51037d3wfr9cq/croots/recipe/zipp_1652341773612/work
 zope.interface @ file:///opt/concourse/worker/volumes/live/8c2d4bd1-6406-47f0-45ce-890992bafbf6/volume/zope.interface_1625036159007/work
+
+web3~=5.23.0
+geopandas~=0.10.2
+folium~=0.12.1
+pyproj~=3.3.0
+numpy~=1.22.0
+rasterio~=1.2.10
+shapely~=1.8.0
+send2trash~=1.8.0
+beautifulsoup4~=4.10.0
+selenium~=4.0.0
+unpackqa~=0.2.1
+rioxarray~=0.8.0
+xarray~=0.20.2
+flask~=1.1.2

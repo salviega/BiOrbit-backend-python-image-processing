@@ -26,7 +26,7 @@ class LandsatAPI:
 
         self.username = username
         self.password = password
-        self.driver = 10 # prepare_and_run_chromium(chromedriver_path, downloads_dir)
+        self.driver = prepare_and_run_chromium(chromedriver_path, downloads_dir)
         self.download_folder = downloads_dir
         self.protected_area_dir = protected_area_dir
         self.protected_area_deforestation_dir = protected_area_deforestation_dir
@@ -63,8 +63,12 @@ class LandsatAPI:
                 decimals_button = self.driver.find_element(By.XPATH, '//*[@id="lat_lon_section"]/fieldset/label[2]')
                 decimals_button.click()
 
+                # Flatten the nested list to match the expected format
+                coordinates = [tuple(coord) for coord in coordinates[0]]
+
                 # Add coords
                 for coord in coordinates:
+                    print(coord)
                     time.sleep(1.5)
                     latitude = str(coord[1])
                     longitude = str(coord[0])
